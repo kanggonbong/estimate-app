@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>쿠팡 체크상품 견적서 생성기 v6</title>
+  <title>쿠팡 체크상품 견적서 생성기 </title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: Arial, sans-serif; }
@@ -27,7 +27,7 @@
   <div class="max-w-5xl mx-auto no-print">
     <header class="mb-8">
       <h1 class="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
-        <span class="text-blue-600">🛒</span> 쿠팡 체크상품 견적서 생성기 v6
+        <span class="text-blue-600">🛒</span> 쿠팡 체크상품 견적서 생성기 
       </h1>
       <p class="text-slate-500 mt-2">쿠팡 장바구니에서 북마클릿을 누르면 새 창에서 자동으로 체크 상품을 불러옵니다.</p>
     </header>
@@ -265,7 +265,7 @@
 
       if (event.data.type === 'PING') {
         if (window.opener) {
-          window.opener.postMessage({ type: 'QUOTE_APP_READY' }, event.origin);
+          window.opener.postMessage({ type: 'QUOTE_APP_READY' }, '*');
         }
         return;
       }
@@ -284,6 +284,11 @@
       document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
       updatePreview();
       showStatus('이 페이지는 자동 수신 대기 중입니다. 쿠팡 장바구니에서 북마클릿을 눌러 주세요.', 'ok');
+      if (window.opener) {
+        try {
+          window.opener.postMessage({ type: 'QUOTE_APP_READY' }, '*');
+        } catch (e) {}
+      }
     };
   </script>
 </body>
