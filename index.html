@@ -6,7 +6,7 @@
   <title>쿠팡 체크상품 견적서 생성기</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: 'Pretendard', sans-serif; }
+    body { font-family: Arial, sans-serif; }
     @media print {
       .no-print { display: none !important; }
       body { padding: 0; background: white; }
@@ -23,144 +23,140 @@
     .print-title { display: none; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
   </style>
 </head>
-<body class="bg-slate-50 p-4 md:p-8 min-h-screen">
+<body class="bg-slate-50 p-4 md:p-8">
   <div class="max-w-5xl mx-auto no-print">
-    <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-extrabold text-slate-900 flex items-center gap-3">
-          <span class="text-blue-600">🛒</span> 쿠팡 견적서 생성기
-        </h1>
-        <p class="text-slate-500 mt-2">쿠팡 장바구니에서 체크한 상품들이 아래에 자동으로 표시됩니다.</p>
-      </div>
+    <header class="mb-8">
+      <h1 class="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
+        <span class="text-blue-600">🛒</span> 쿠팡 체크상품 견적서 생성기 
+      </h1>
+      <p class="text-slate-500 mt-2">쿠팡 장바구니에서 북마클릿을 누르면 자동으로 체크 상품을 불러옵니다.</p>
       <!-- 상태 메시지 박스 -->
-      <div id="status-box" class="rounded-2xl px-4 py-3 text-sm font-bold bg-white border border-slate-200 shadow-sm flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-        <span id="status-text" class="text-slate-600">데이터를 기다리는 중...</span>
-      </div>
+      <div id="status-box" class="mt-4 hidden rounded-xl px-4 py-3 text-sm"></div>
     </header>
 
-    <!-- 상품 편집 영역 -->
-    <div id="selection-area" class="bg-white p-6 rounded-3xl shadow-xl border border-slate-200 mb-8 hidden">
-      <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 border-b border-slate-100 pb-4">
+    <div id="selection-area" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 hidden">
+      <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4 border-b pb-4">
         <div>
-          <h2 class="text-xl font-bold text-slate-800">가져온 상품 리스트</h2>
-          <p class="text-xs text-slate-400 mt-1 uppercase tracking-tight">Check and edit items before printing</p>
+          <h2 class="text-lg font-bold">가져온 체크 상품 확인</h2>
+          <p class="text-xs text-slate-500 mt-1">단가와 수량은 여기서 수정할 수 있습니다.</p>
         </div>
-        <div class="flex items-center gap-2">
-          <button onclick="markAll(true)" class="text-xs px-4 py-2 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition">전체 선택</button>
-          <button onclick="markAll(false)" class="text-xs px-4 py-2 rounded-xl bg-slate-50 text-slate-500 font-bold hover:bg-slate-100 transition">전체 해제</button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="markAll(true)" class="text-xs px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-bold hover:bg-blue-100">전체 체크</button>
+          <button onclick="markAll(false)" class="text-xs px-3 py-2 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200">전체 해제</button>
         </div>
       </div>
 
-      <div class="overflow-y-auto max-h-[400px] border border-slate-100 rounded-2xl mb-6">
-        <table class="w-full text-sm border-none">
-          <thead class="sticky top-0 bg-slate-900 text-white z-10">
+      <div class="overflow-y-auto max-h-[420px] border rounded-xl mb-4">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-slate-800 text-white z-10">
             <tr>
-              <th class="w-16 border-none">선택</th>
-              <th class="border-none text-left">상품명</th>
-              <th class="w-20 border-none text-center">수량</th>
-              <th class="w-32 border-none text-right">단가 (원)</th>
+              <th class="w-16">선택</th>
+              <th>상품명</th>
+              <th class="w-20 text-center">수량</th>
+              <th class="w-32 text-right">단가</th>
             </tr>
           </thead>
-          <tbody id="parsed-list" class="divide-y divide-slate-50"></tbody>
+          <tbody id="parsed-list"></tbody>
         </table>
       </div>
 
-      <!-- 배송비/할인 설정 -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
         <div>
-          <label class="block text-xs font-black text-slate-400 mb-2 uppercase">Shipping Fee (배송비)</label>
-          <input type="number" id="input-shipping" value="0" oninput="updatePreview()" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
+          <label class="block text-xs font-bold text-slate-500 mb-1">배송비</label>
+          <input type="number" id="input-shipping" value="0" oninput="updatePreview()" class="w-full p-2 border rounded-lg outline-none font-bold">
         </div>
         <div>
-          <label class="block text-xs font-black text-slate-400 mb-2 uppercase">Discount (할인금액)</label>
-          <input type="number" id="input-discount" value="0" oninput="updatePreview()" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500 text-red-600 font-bold">
+          <label class="block text-xs font-bold text-slate-500 mb-1">할인금액</label>
+          <input type="number" id="input-discount" value="0" oninput="updatePreview()" class="w-full p-2 border rounded-lg outline-none text-red-600 font-bold">
         </div>
         <div class="flex items-end">
-          <button onclick="scrollToPreview()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-black transition-all shadow-lg shadow-slate-200">
-            견적 미리보기로 이동 ↓
+          <button onclick="scrollToPreview()" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold hover:bg-slate-900 transition">
+            견적서 미리보기 ↓
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 실제 인쇄될 견적서 영역 -->
-  <div id="print-area" class="max-w-4xl mx-auto bg-white p-6 md:p-16 shadow-2xl border border-slate-200 print-area relative mb-24 rounded-none md:rounded-3xl">
+  <div id="print-area" class="max-w-4xl mx-auto bg-white p-4 md:p-12 shadow-2xl border border-slate-200 print-area relative mb-20">
     <div class="print-title">견적 명세서</div>
 
-    <div class="mb-10 flex justify-between items-end border-b-4 border-slate-900 pb-6">
+    <div class="mb-6 flex justify-between items-end border-b-2 border-black pb-4">
       <div>
-        <h3 class="text-4xl font-black text-slate-900">견적 상세 내역</h3>
-        <p class="text-sm text-slate-400 mt-2 uppercase tracking-[0.2em] font-medium">Estimated Quotation</p>
+        <h3 class="text-2xl font-black">견적 상세 내역</h3>
+        <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest">Estimated Quotation for School</p>
       </div>
       <div class="text-right text-sm">
-        <p class="font-bold text-slate-800">발행일: <span id="current-date"></span></p>
+        <p class="font-bold">발행일: <span id="current-date"></span></p>
       </div>
     </div>
 
-    <table class="w-full text-[14px] border-2 border-black">
+    <table class="w-full text-[13px] border-2 border-black">
       <thead>
         <tr class="bg-gray-custom">
-          <th style="width: 55%;" class="border-black py-3">상품명</th>
-          <th style="width: 10%;" class="border-black py-3 text-center">수량</th>
-          <th style="width: 25%;" class="border-black py-3 text-right">거래액 (VAT 포함)</th>
-          <th style="width: 10%;" class="border-black py-3">비고</th>
+          <th style="width: 55%;" class="border-black">상품명</th>
+          <th style="width: 10%;" class="border-black">수량</th>
+          <th style="width: 25%;" class="border-black">거래액<br>(VAT포함 원화)</th>
+          <th style="width: 10%;" class="border-black">비고</th>
         </tr>
       </thead>
       <tbody id="final-list">
-        <tr><td colspan="4" class="py-32 text-center text-slate-300 font-medium">쿠팡 북마크를 실행하면 여기에 견적서가 생성됩니다.</td></tr>
+        <tr><td colspan="4" class="py-20 text-center text-slate-300">체크 상품을 불러오면 여기에 견적서가 생성됩니다.</td></tr>
       </tbody>
       <tfoot class="border-t-2 border-black">
         <tr>
-          <td colspan="2" class="text-center font-bold bg-gray-custom py-2">총 거래액 합계</td>
+          <td colspan="2" class="text-center font-bold bg-gray-custom">총 거래액 합계</td>
           <td id="res-gross" class="text-right font-bold px-4">0</td>
-          <td class="border-black"></td>
+          <td></td>
         </tr>
         <tr>
-          <td colspan="2" class="text-center font-bold bg-gray-custom py-2">배송비 합계</td>
+          <td colspan="2" class="text-center font-bold bg-gray-custom">배송비 합계</td>
           <td id="res-shipping" class="text-right px-4">0</td>
-          <td class="border-black"></td>
+          <td></td>
         </tr>
         <tr>
-          <td colspan="2" class="text-center font-bold bg-gray-custom py-2 text-red-600">할인금액 (-)</td>
+          <td colspan="2" class="text-center font-bold bg-gray-custom">할인금액</td>
           <td id="res-discount" class="text-right px-4 text-red-600">0</td>
-          <td class="border-black"></td>
+          <td></td>
         </tr>
         <tr class="bg-dark-custom">
-          <td colspan="2" class="text-center font-bold py-3 text-lg">실제 총 결제 금액</td>
-          <td id="res-net" class="text-right px-4 text-2xl">0</td>
-          <td class="text-center text-[10px] border-black">결제예정</td>
+          <td colspan="2" class="text-center font-bold">실제 총 결제 금액</td>
+          <td id="res-net" class="text-right px-4 text-lg">0</td>
+          <td class="text-center text-[10px]">결제예정</td>
         </tr>
       </tfoot>
     </table>
 
-    <div class="mt-12 text-center no-print">
-      <p class="text-slate-400 text-sm italic">위 내용은 쿠팡 장바구니 데이터를 바탕으로 생성되었습니다.</p>
-    </div>
-
-    <!-- 인쇄 버튼 -->
-    <button onclick="window.print()" class="no-print fixed bottom-8 right-8 bg-blue-600 text-white w-24 h-24 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex flex-col items-center justify-center z-50">
+    <button onclick="window.print()" class="no-print fixed bottom-8 right-8 bg-blue-600 text-white w-24 h-24 rounded-full shadow-2xl hover:scale-110 transition-all flex flex-col items-center justify-center z-50">
       <span class="text-3xl">🖨️</span>
-      <span class="text-xs font-black mt-1">인쇄 / 저장</span>
+      <span class="text-xs font-bold mt-1">인쇄/저장</span>
     </button>
   </div>
 
   <script>
     let items = [];
 
-    function formatNumber(num) { return new Intl.NumberFormat('ko-KR').format(num); }
-    function escapeHtml(str) { return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])); }
+    function formatNumber(num) {
+      return new Intl.NumberFormat('ko-KR').format(num);
+    }
 
-    function updateStatus(text, isDone = false) {
-      const statusText = document.getElementById('status-text');
-      const dot = statusText.previousElementSibling;
-      statusText.innerText = text;
-      if (isDone) {
-        dot.classList.remove('bg-amber-400', 'animate-pulse');
-        dot.classList.add('bg-green-500');
-        document.getElementById('status-box').classList.add('bg-green-50', 'text-green-800', 'border-green-200');
-      }
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showStatus(message, type) {
+      const box = document.getElementById('status-box');
+      box.classList.remove('hidden');
+      box.className = 'mt-4 rounded-xl px-4 py-3 text-sm border';
+      if (type === 'ok') box.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
+      else if (type === 'warn') box.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
+      else box.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+      box.innerHTML = message;
     }
 
     function renderSelectionTable() {
@@ -168,12 +164,17 @@
       list.innerHTML = '';
       items.forEach((item, index) => {
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition-colors";
         tr.innerHTML = `
-          <td class="text-center p-4"><input type="checkbox" ${item.checked ? 'checked' : ''} onchange="updateItemChecked(${index}, this.checked)" class="w-4 h-4 rounded"></td>
-          <td class="p-4 font-semibold text-slate-700">${escapeHtml(item.name)}</td>
-          <td class="p-4 text-center"><input type="number" min="1" value="${item.qty}" oninput="updateItemQty(${index}, this.value)" class="w-16 border rounded-lg p-1 text-center bg-white focus:ring-2 focus:ring-blue-500 outline-none"></td>
-          <td class="p-4 text-right"><input type="number" min="0" value="${item.price}" oninput="updateItemPrice(${index}, this.value)" class="w-28 border rounded-lg p-1 text-right bg-white font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none"></td>
+          <td class="text-center p-4">
+            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="updateItemChecked(${index}, this.checked)">
+          </td>
+          <td class="p-4 font-medium">${escapeHtml(item.name)}</td>
+          <td class="p-4 text-center">
+            <input type="number" min="1" value="${item.qty}" oninput="updateItemQty(${index}, this.value)" class="w-16 border rounded p-1 text-center bg-white">
+          </td>
+          <td class="p-4 text-right">
+            <input type="number" min="0" value="${item.price}" oninput="updateItemPrice(${index}, this.value)" class="w-28 border rounded p-1 text-right bg-white font-bold text-blue-600">
+          </td>
         `;
         list.appendChild(tr);
       });
@@ -182,9 +183,14 @@
     function updateItemChecked(index, isChecked) { items[index].checked = isChecked; updatePreview(); }
     function updateItemQty(index, val) { items[index].qty = Math.max(1, parseInt(val, 10) || 1); updatePreview(); }
     function updateItemPrice(index, val) { items[index].price = Math.max(0, parseInt(val, 10) || 0); updatePreview(); }
-    function markAll(flag) { items.forEach(it => it.checked = flag); renderSelectionTable(); updatePreview(); }
 
-    function setItems(newItems) {
+    function markAll(flag) {
+      items.forEach(it => it.checked = flag);
+      renderSelectionTable();
+      updatePreview();
+    }
+
+    function setItems(newItems, sourceText) {
       items = newItems.map(item => ({
         name: String(item.name || '상품명 없음'),
         price: Number(item.price || 0),
@@ -192,12 +198,15 @@
         checked: item.checked !== false
       })).filter(item => item.name && item.price > 0);
 
-      if (!items.length) return;
+      if (!items.length) {
+        showStatus('가져온 데이터에 유효한 상품이 없습니다.', 'error');
+        return;
+      }
 
       document.getElementById('selection-area').classList.remove('hidden');
       renderSelectionTable();
       updatePreview();
-      updateStatus('데이터 수신 완료!', true);
+      showStatus(sourceText, 'ok');
       document.getElementById('selection-area').scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -208,18 +217,13 @@
       const checkedItems = items.filter(it => it.checked);
 
       if (!checkedItems.length) {
-        finalList.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-slate-300 font-bold">선택된 상품이 없습니다.</td></tr>';
+        finalList.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-slate-300">선택된 상품이 없습니다.</td></tr>';
       } else {
         checkedItems.forEach(item => {
           const subtotal = item.price * item.qty;
           totalGross += subtotal;
           const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="px-4 py-3 border-black">${escapeHtml(item.name)}</td>
-            <td class="text-center border-black">${item.qty}</td>
-            <td class="text-right px-4 border-black font-medium">${formatNumber(subtotal)}</td>
-            <td class="border-black"></td>
-          `;
+          tr.innerHTML = `<td class="px-4 py-3 border-black">${escapeHtml(item.name)}</td><td class="text-center border-black">${item.qty}</td><td class="text-right px-4 border-black font-medium">${formatNumber(subtotal)}</td><td class="border-black"></td>`;
           finalList.appendChild(tr);
         });
 
@@ -241,19 +245,38 @@
       document.getElementById('res-net').innerText = formatNumber(netTotal);
     }
 
-    function scrollToPreview() { document.getElementById('print-area').scrollIntoView({ behavior: 'smooth' }); }
+    function scrollToPreview() {
+      document.getElementById('print-area').scrollIntoView({ behavior: 'smooth' });
+    }
 
     window.addEventListener('message', (event) => {
       if (!event.data) return;
+
+      if (event.data.type === 'PING') {
+        if (window.opener) {
+          window.opener.postMessage({ type: 'QUOTE_APP_READY' }, '*');
+        }
+        return;
+      }
+
       if (event.data.type === 'COUPANG_CART_ITEMS') {
-        setItems(event.data.payload);
+        const payload = event.data.payload;
+        if (!Array.isArray(payload) || !payload.length) {
+          showStatus('전달받은 상품 데이터가 비어 있습니다.', 'warn');
+          return;
+        }
+        setItems(payload, '북마클릿에서 체크 상품을 자동으로 불러왔습니다.');
       }
     });
 
     window.onload = () => {
       document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
+      updatePreview();
+      // 초기 대기 메시지 제거
       if (window.opener) {
-        try { window.opener.postMessage({ type: 'QUOTE_APP_READY' }, '*'); } catch (e) {}
+        try {
+          window.opener.postMessage({ type: 'QUOTE_APP_READY' }, '*');
+        } catch (e) {}
       }
     };
   </script>
