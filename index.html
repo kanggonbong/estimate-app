@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>쿠팡 체크상품 견적서 생성기 v5</title>
+  <title>쿠팡 체크상품 견적서 생성기 v6</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: Arial, sans-serif; }
@@ -27,46 +27,25 @@
   <div class="max-w-5xl mx-auto no-print">
     <header class="mb-8">
       <h1 class="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
-        <span class="text-blue-600">🛒</span> 쿠팡 체크상품 견적서 생성기 v5
+        <span class="text-blue-600">🛒</span> 쿠팡 체크상품 견적서 생성기 v6
       </h1>
-      <p class="text-slate-500 mt-2">북마클릿 클릭 시 새 창에서 자동으로 체크 상품을 불러와 견적서를 생성합니다.</p>
+      <p class="text-slate-500 mt-2">쿠팡 장바구니에서 북마클릿을 누르면 새 창에서 자동으로 체크 상품을 불러옵니다.</p>
     </header>
 
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-      <h2 class="text-lg font-bold mb-3">1. 북마클릿 준비</h2>
-      <p class="text-sm text-slate-600 mb-4">
-        즐겨찾기 주소(URL) 칸에 아래 코드를 넣은 뒤, 쿠팡 장바구니에서 실행하세요.
-      </p>
-
-      <label class="block text-sm font-bold mb-2">즐겨찾기 URL 칸에 넣을 코드</label>
-      <textarea id="bookmarklet-code" rows="14" class="w-full p-3 border rounded-xl text-xs bg-slate-50 mb-3" readonly></textarea>
-
-      <div class="flex flex-wrap gap-3">
-        <button onclick="copyBookmarklet()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow">
-          북마클릿 코드 복사
-        </button>
-        <button onclick="loadFromClipboard()" class="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-900 transition">
-          클립보드에서 불러오기
-        </button>
-        <button onclick="clearImported()" class="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition">
-          초기화
-        </button>
-      </div>
+      <h2 class="text-lg font-bold mb-3">사용 방법</h2>
+      <ol class="list-decimal ml-5 text-sm text-slate-700 space-y-2">
+        <li>쿠팡 장바구니에서 상품을 체크합니다.</li>
+        <li>저장한 북마클릿을 클릭합니다.</li>
+        <li>새 창이 열리면 체크 상품과 견적서가 자동으로 채워집니다.</li>
+      </ol>
       <div id="status-box" class="mt-4 hidden rounded-xl px-4 py-3 text-sm"></div>
-    </div>
-
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-      <h2 class="text-lg font-bold mb-3">2. 수동 붙여넣기</h2>
-      <textarea id="manual-json" rows="8" class="w-full p-3 border rounded-xl text-xs bg-slate-50 mb-3" placeholder='[{"name":"상품명","price":12000,"qty":1,"priceSource":"30% 12,300원"}]'></textarea>
-      <button onclick="loadManualJson()" class="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-800 transition">
-        JSON 불러오기
-      </button>
     </div>
 
     <div id="selection-area" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 hidden">
       <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4 border-b pb-4">
         <div>
-          <h2 class="text-lg font-bold">3. 가져온 체크 상품 확인</h2>
+          <h2 class="text-lg font-bold">가져온 체크 상품 확인</h2>
           <p class="text-xs text-slate-500 mt-1">단가와 수량은 여기서 수정할 수 있습니다.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -165,8 +144,6 @@
 
   <script>
     let items = [];
-    const APP_URL = 'https://kanggonbong.github.io/estimate-app/';
-    const APP_ORIGIN = 'https://kanggonbong.github.io';
 
     function formatNumber(num) {
       return new Intl.NumberFormat('ko-KR').format(num);
@@ -191,209 +168,11 @@
       box.innerHTML = message;
     }
 
-    function makeBookmarklet() {
-      return `javascript:(()=>{try{
-const APP_URL='https://kanggonbong.github.io/estimate-app/';
-const APP_ORIGIN=new URL(APP_URL).origin;
-
-const CHECKBOXES=[...document.querySelectorAll('input[type="checkbox"]')].filter(cb=>cb.checked);
-const PRICE_RE=/([0-9][0-9,]{2,})\s*원/g;
-const NOISE_LINE=/^(Coupang|장바구니\(\d+\)|장바구니|무료배송|로켓|내일|도착|새벽|와우|쿠팡|선택|삭제|변경|수량|옵션|구매|주문|배송|상품금액|총상품금액)$/i;
-const NOISE_TEXT=/(할인 종료|남은 상품이 있어요|장바구니\(|Coupang|쿠팡|총 주문금액|결제예정금액|주문하기|품절|추천|광고)/i;
-const out=[];
-const seen=new Set();
-
-function cleanLines(text){
-  return (text||'').split('\n').map(v=>v.trim()).filter(Boolean);
-}
-
-function scorePrice(line, idx, lines){
-  let s=0;
-  if(/%/.test(line)) s+=100;
-  const near=((lines[idx-1]||'')+' '+(lines[idx+1]||''));
-  if(/%/.test(near)) s+=60;
-  if(/판매가|할인가|구매가|가격/.test(line)) s+=12;
-  if(/즉시할인|쿠폰/.test(line)) s+=4;
-  if(/정상가|정가|원래|기준가/.test(line)) s-=25;
-  return s;
-}
-
-function choosePrice(lines){
-  const candidates=[];
-  lines.forEach((line, idx)=>{
-    const matches=[...line.matchAll(PRICE_RE)];
-    matches.forEach(m=>{
-      const price=parseInt(m[1].replace(/,/g,''),10);
-      if(!price || price<100) return;
-      candidates.push({price, line, score:scorePrice(line, idx, lines)});
-    });
-  });
-  if(!candidates.length) return null;
-  candidates.sort((a,b)=>{
-    if(b.score!==a.score) return b.score-a.score;
-    return a.price-b.price;
-  });
-  return candidates[0];
-}
-
-function pickName(lines){
-  const candidates=lines.filter(line=>{
-    if(NOISE_LINE.test(line)) return false;
-    if(NOISE_TEXT.test(line)) return false;
-    if(PRICE_RE.test(line)) return false;
-    if(line.length < 6) return false;
-    if(/^\d+\s*개$/.test(line)) return false;
-    if(/^수량\s*[:：]?\s*\d+/.test(line)) return false;
-    return true;
-  });
-  candidates.sort((a,b)=>b.length-a.length);
-  return candidates[0] || null;
-}
-
-function extractQty(lines){
-  for(const line of lines){
-    let m=line.match(/수량\s*[:：]?\s*(\d+)/);
-    if(m) return Math.max(1,parseInt(m[1],10));
-    m=line.match(/^(\d+)\s*개$/);
-    if(m) return Math.max(1,parseInt(m[1],10));
-  }
-  return 1;
-}
-
-function findBestRoot(cb){
-  const candidates=[];
-  let el=cb.parentElement;
-  let depth=0;
-  while(el && depth<8){
-    const text=(el.innerText||'').trim();
-    const lines=cleanLines(text);
-    const price=choosePrice(lines);
-    const name=pickName(lines);
-    const qtyBox=el.querySelector('input[type="number"], select');
-    const hasQtyText=lines.some(v=>/^수량\s*[:：]?\s*\d+/.test(v) || /^\d+\s*개$/.test(v));
-    const score=(
-      (price ? 5 : 0) +
-      (name ? 5 : 0) +
-      ((qtyBox || hasQtyText) ? 2 : 0) -
-      (text.length > 1500 ? 6 : 0) -
-      (NOISE_TEXT.test(text) ? 4 : 0)
-    );
-    if(price && name) candidates.push({el, score, lines, price, name});
-    el=el.parentElement;
-    depth++;
-  }
-  if(!candidates.length) return null;
-  candidates.sort((a,b)=>b.score-a.score);
-  return candidates[0];
-}
-
-CHECKBOXES.forEach(cb=>{
-  const root=findBestRoot(cb);
-  if(!root) return;
-
-  const lines=root.lines;
-  const choice=root.price;
-  const name=root.name;
-  const qty=extractQty(lines);
-
-  if(!name || NOISE_TEXT.test(name) || /^Coupang$/i.test(name) || /^장바구니/.test(name)) return;
-
-  const key=name+'__'+choice.price;
-  if(seen.has(key)) return;
-  seen.add(key);
-
-  out.push({
-    name:name,
-    price:choice.price,
-    qty:qty,
-    checked:true,
-    priceSource:choice.line
-  });
-});
-
-if(!out.length){
-  alert('체크된 실제 상품을 찾지 못했습니다.\n상단 제목/안내 영역만 체크된 것으로 읽힌 경우일 수 있습니다.');
-  return;
-}
-
-const newWin=window.open(APP_URL,'_blank');
-if(!newWin){
-  alert('새 창이 차단되었습니다. 팝업 차단을 해제해 주세요.');
-  return;
-}
-
-let sent=false;
-const startAt=Date.now();
-
-function sendData(){
-  if(sent) return;
-  sent=true;
-  try {
-    newWin.postMessage({
-      type:'COUPANG_CART_ITEMS',
-      payload:out
-    }, APP_ORIGIN);
-  } catch (err) {
-    alert('견적 페이지로 데이터 전달에 실패했습니다.');
-  }
-}
-
-const timer=setInterval(()=>{
-  if(Date.now()-startAt>7000){
-    clearInterval(timer);
-    sendData();
-    window.removeEventListener('message', onMessage);
-    return;
-  }
-  try {
-    newWin.postMessage({type:'PING'}, APP_ORIGIN);
-  } catch (e) {}
-}, 400);
-
-function onMessage(event){
-  if(event.origin !== APP_ORIGIN) return;
-  if(event.source !== newWin) return;
-  if(event.data && event.data.type === 'QUOTE_APP_READY'){
-    clearInterval(timer);
-    sendData();
-    window.removeEventListener('message', onMessage);
-  }
-}
-
-window.addEventListener('message', onMessage);
-
-}catch(e){alert('북마클릿 실행 중 오류: '+e.message);})();`;
-    }
-
-    function copyBookmarklet() {
-      navigator.clipboard.writeText(document.getElementById('bookmarklet-code').value).then(() => {
-        showStatus('북마클릿 코드가 복사되었습니다. 즐겨찾기 URL 칸에 붙여넣으세요.', 'ok');
-      }).catch(() => {
-        showStatus('자동 복사가 안 되면 위 코드 내용을 직접 복사해 즐겨찾기 URL 칸에 넣으세요.', 'warn');
-      });
-    }
-
-    async function loadFromClipboard() {
-      try {
-        const raw = await navigator.clipboard.readText();
-        if (!raw.trim()) {
-          showStatus('클립보드에 내용이 없습니다.', 'warn');
-          return;
-        }
-        const parsed = JSON.parse(raw);
-        setItems(parsed, '클립보드에서 체크 상품 데이터를 불러왔습니다.');
-        document.getElementById('manual-json').value = raw;
-      } catch (e) {
-        showStatus('클립보드에서 JSON을 읽지 못했습니다. 북마클릿을 먼저 실행했는지 확인해 주세요.', 'error');
-      }
-    }
-
     function renderSelectionTable() {
       const list = document.getElementById('parsed-list');
       list.innerHTML = '';
       items.forEach((item, index) => {
         const tr = document.createElement('tr');
-        tr.className = 'border-b transition-all';
         tr.innerHTML = `
           <td class="text-center p-4">
             <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="updateItemChecked(${index}, this.checked)">
@@ -477,36 +256,11 @@ window.addEventListener('message', onMessage);
       document.getElementById('res-net').innerText = formatNumber(netTotal);
     }
 
-    function scrollToPreview() { document.getElementById('print-area').scrollIntoView({ behavior: 'smooth' }); }
-
-    function loadManualJson() {
-      const raw = document.getElementById('manual-json').value.trim();
-      if (!raw) {
-        showStatus('먼저 JSON 내용을 붙여넣어 주세요.', 'warn');
-        return;
-      }
-      try {
-        const parsed = JSON.parse(raw);
-        setItems(parsed, '수동으로 붙여넣은 JSON 데이터를 불러왔습니다.');
-      } catch (e) {
-        showStatus('JSON 형식이 올바르지 않습니다: ' + e.message, 'error');
-      }
+    function scrollToPreview() {
+      document.getElementById('print-area').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function clearImported() {
-      items = [];
-      document.getElementById('selection-area').classList.add('hidden');
-      document.getElementById('manual-json').value = '';
-      document.getElementById('final-list').innerHTML = '<tr><td colspan="4" class="py-20 text-center text-slate-300">체크 상품을 불러오면 여기에 견적서가 생성됩니다.</td></tr>';
-      document.getElementById('res-gross').innerText = '0';
-      document.getElementById('res-shipping').innerText = '0';
-      document.getElementById('res-discount').innerText = '0';
-      document.getElementById('res-net').innerText = '0';
-      showStatus('가져온 데이터를 지웠습니다.', 'warn');
-    }
-
-    function receiveItemsFromOpener(event) {
-      if (event.origin !== APP_ORIGIN) return;
+    window.addEventListener('message', (event) => {
       if (!event.data) return;
 
       if (event.data.type === 'PING') {
@@ -523,19 +277,13 @@ window.addEventListener('message', onMessage);
           return;
         }
         setItems(payload, '북마클릿에서 체크 상품을 자동으로 불러왔습니다.');
-        document.getElementById('manual-json').value = JSON.stringify(payload, null, 2);
       }
-    }
-
-    window.addEventListener('message', receiveItemsFromOpener);
+    });
 
     window.onload = () => {
       document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
-      document.getElementById('bookmarklet-code').value = makeBookmarklet();
       updatePreview();
-      if (window.location.origin === APP_ORIGIN) {
-        showStatus('배포 주소 연결 완료. 이제 쿠팡 장바구니에서 북마클릿을 실행해 보세요.', 'ok');
-      }
+      showStatus('이 페이지는 자동 수신 대기 중입니다. 쿠팡 장바구니에서 북마클릿을 눌러 주세요.', 'ok');
     };
   </script>
 </body>
