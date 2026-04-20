@@ -62,7 +62,6 @@
               <th>상품명</th>
               <th class="w-20 text-center">수량</th>
               <th class="w-32 text-right">단가</th>
-              <th class="w-32 text-center">가격출처</th>
             </tr>
           </thead>
           <tbody id="parsed-list"></tbody>
@@ -184,7 +183,6 @@
           <td class="p-4 text-right">
             <input type="number" min="0" value="${item.price}" oninput="updateItemPrice(${index}, this.value)" class="w-28 border rounded p-1 text-right bg-white font-bold text-blue-600">
           </td>
-          <td class="p-4 text-center text-[11px] text-slate-500">${escapeHtml(item.priceSource || '-')}</td>
         `;
         list.appendChild(tr);
       });
@@ -205,8 +203,7 @@
         name: String(item.name || '상품명 없음'),
         price: Number(item.price || 0),
         qty: Math.max(1, Number(item.qty || 1)),
-        checked: item.checked !== false,
-        priceSource: String(item.priceSource || '')
+        checked: item.checked !== false
       })).filter(item => item.name && item.price > 0);
 
       if (!items.length) {
