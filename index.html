@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>쿠팡 체크상품 견적서 생성기 </title>
+  <title>쿠팡 체크상품 견적서 생성기</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: Arial, sans-serif; }
@@ -29,18 +29,10 @@
       <h1 class="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
         <span class="text-blue-600">🛒</span> 쿠팡 체크상품 견적서 생성기 
       </h1>
-      <p class="text-slate-500 mt-2">쿠팡 장바구니에서 북마클릿을 누르면 새 창에서 자동으로 체크 상품을 불러옵니다.</p>
-    </header>
-
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-      <h2 class="text-lg font-bold mb-3">사용 방법</h2>
-      <ol class="list-decimal ml-5 text-sm text-slate-700 space-y-2">
-        <li>쿠팡 장바구니에서 상품을 체크합니다.</li>
-        <li>저장한 북마클릿을 클릭합니다.</li>
-        <li>새 창이 열리면 체크 상품과 견적서가 자동으로 채워집니다.</li>
-      </ol>
+      <p class="text-slate-500 mt-2">쿠팡 장바구니에서 북마클릿을 누르면 자동으로 체크 상품을 불러옵니다.</p>
+      <!-- 상태 메시지 박스 -->
       <div id="status-box" class="mt-4 hidden rounded-xl px-4 py-3 text-sm"></div>
-    </div>
+    </header>
 
     <div id="selection-area" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 hidden">
       <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4 border-b pb-4">
@@ -280,7 +272,7 @@
     window.onload = () => {
       document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
       updatePreview();
-      showStatus('이 페이지는 자동 수신 대기 중입니다. 쿠팡 장바구니에서 북마클릿을 눌러 주세요.', 'ok');
+      // 초기 대기 메시지 제거
       if (window.opener) {
         try {
           window.opener.postMessage({ type: 'QUOTE_APP_READY' }, '*');
