@@ -1,0 +1,316 @@
+<script>
+    let itemList = [];
+    let autoShippingTotal = 0;
+
+    const junkKeywords = [
+        "수량변경", "삭제", "도착 보장", "새벽 배송", "무료배송", "로켓배송", "로켓프레시",
+        "판매자", "결제예정", "선택삭제", "품절삭제", "배송지", "내일", "모레", "도착 예정",
+        "쿠폰", "적립", "옵션", "내 주문 시", "한달구매", "상품평", "구매하기", "선택됨",
+        "discount_urgency", "timer", "status", "info", "할인적용", "100g당",
+        "종료", "도착", "만족", "예정", "캐시", "최대", "장바구니 담기",
+        "평점", "별점", "개 상품평", "평점 5점", "평점 4점",
+        "합계", "총액", "예상", "주문", "배송비", "결제", "광고", "추천"
+    ];
+
+    function normalizeText(str = "") {
+        return str.replace(/\s+/g, " ").trim();
+    }
+
+    function isPriceLine(line = "") {
+        return /([0-9,]{3,10})원/.test(line);
+    }
+
+    function isQtyLine(line = "") {
+        return /^([0-9]{1,2})개?$/.test(line.trim());
+    }
+
+    function isRatingLine(line = "") {
+        const s = line.trim();
+        return /^[0-5]\.[0-9]$/.test(s) || /평점|별점|상품평/.test(s);
+    }
+
+    function isTimerLine(line = "") {
+        return /[0-9]{2}:[0-9]{2}/.test(line);
+    }
+
+    function containsJunkKeyword(line = "") {
+        const lower = line.toLowerCase();
+        return junkKeywords.some(k => lower.includes(k.toLowerCase()));
+    }
+
+    function isLikelyMetaLine(line = "") {
+        const s = normalizeText(line);
+        if (!s) return true;
+        if (s.length < 4) return true;
+
+        if (containsJunkKeyword(s)) return true;
+        if (isPriceLine(s)) return true;
+        if (isQtyLine(s)) return true;
+        if (isRatingLine(s)) return true;
+        if (isTimerLine(s)) return true;
+        if (s.includes('%')) return true;
+        if (/^\d+$/.test(s)) return true;
+        if (/^[0-9,\s]+원?$/.test(s)) return true;
+
+        return false;
+    }
+
+    function isLikelyProductName(line = "") {
+        const s = normalizeText(line);
+        if (isLikelyMetaLine(s)) return false;
+
+        const hasMeaningfulText = /[가-힣A-Za-z]/.test(s);
+        const reasonableLength = s.length >= 5 && s.length <= 120;
+
+        if (!hasMeaningfulText || !reasonableLength) return false;
+
+        const badPatterns = [
+            /배송/, /도착/, /예정/, /쿠폰/, /할인/, /적립/, /캐시/, /혜택/,
+            /장바구니/, /구매/, /주문/, /선택/, /삭제/, /옵션/, /판매자/,
+            /상품평/, /평점/, /별점/, /합계/, /총액/, /결제/, /광고/, /추천/
+        ];
+
+        if (badPatterns.some(rx => rx.test(s))) return false;
+
+        return true;
+    }
+
+    function parsePrice(line = "") {
+        const match = line.match(/([0-9,]{3,10})원/);
+        if (!match) return null;
+        return parseInt(match[1].replace(/,/g, ""), 10);
+    }
+
+    function findNearbyQty(lines, baseIndex) {
+        for (let j = -2; j <= 2; j++) {
+            const line = lines[baseIndex + j];
+            if (!line) continue;
+            const match = normalizeText(line).match(/^([0-9]{1,2})개?$/);
+            if (match) {
+                return parseInt(match[1], 10) || 1;
+            }
+        }
+        return 1;
+    }
+
+    function findBestPriceInBlock(lines, startIndex, maxOffset = 6) {
+        const candidates = [];
+
+        for (let k = 0; k <= maxOffset; k++) {
+            const idx = startIndex + k;
+            const line = lines[idx];
+            if (!line) break;
+
+            // 아래에서 새 상품이 시작되면 현재 상품 블록 종료
+            if (k >= 2 && isLikelyProductName(line)) break;
+
+            // 합계/배송비/적립 등 메타 가격 제외
+            if (/배송비|합계|총액|결제예정|예상|적립예정|적립금|쿠폰적용가/.test(line)) continue;
+
+            const price = parsePrice(line);
+            if (!price || price < 500) continue;
+
+            const prev = lines[idx - 1] || "";
+            const next = lines[idx + 1] || "";
+            const nearbyText = `${prev} ${line} ${next}`;
+
+            candidates.push({
+                price,
+                idx,
+                hasDiscountSignal: /%|할인|즉시할인|쿠폰|sale|특가/i.test(nearbyText)
+            });
+        }
+
+        if (candidates.length === 0) return null;
+
+        // 1) 할인 신호가 있으면 할인 후보 중 마지막 가격 사용
+        // 보통 "원가 -> 할인율 -> 할인가" 순서라 마지막 가격이 실결제가인 경우가 많음
+        const discounted = candidates.filter(c => c.hasDiscountSignal);
+        if (discounted.length > 0) {
+            return discounted[discounted.length - 1];
+        }
+
+        // 2) 할인 신호는 없지만 가격이 2개 이상이고 뒤 가격이 더 낮으면 뒤 가격 사용
+        if (candidates.length >= 2) {
+            const first = candidates[0];
+            const last = candidates[candidates.length - 1];
+            if (last.price < first.price) {
+                return last;
+            }
+        }
+
+        // 3) 그 외에는 첫 번째 정상 가격 사용
+        return candidates[0];
+    }
+
+    function extractSmartItems() {
+        const rawEl = document.getElementById('raw-data');
+        if (!rawEl) return;
+
+        const raw = rawEl.value;
+        if (!raw.trim()) {
+            alert("데이터를 먼저 붙여넣어 주세요.");
+            return;
+        }
+
+        const lines = raw
+            .split('\n')
+            .map(l => normalizeText(l))
+            .filter(l => l.length > 0);
+
+        itemList = [];
+        autoShippingTotal = 0;
+
+        // 1. 배송비 감지
+        for (const line of lines) {
+            const shipMatch = line.match(/배송비\s*([0-9,]{1,10})원/);
+            if (shipMatch) {
+                autoShippingTotal += parseInt(shipMatch[1].replace(/,/g, ''), 10);
+            }
+        }
+
+        // 2. 상품명 중심 블록 파싱
+        for (let i = 0; i < lines.length; i++) {
+            const current = lines[i];
+            if (!isLikelyProductName(current)) continue;
+
+            const bestPrice = findBestPriceInBlock(lines, i + 1, 6);
+            if (!bestPrice) continue;
+
+            const foundPrice = bestPrice.price;
+            const foundPriceIndex = bestPrice.idx;
+            const foundQty = findNearbyQty(lines, foundPriceIndex);
+            const normalizedName = normalizeText(current);
+
+            if (itemList.some(it => it.name === normalizedName)) continue;
+
+            itemList.push({
+                name: normalizedName,
+                price: foundPrice,
+                qty: foundQty,
+                selected: false
+            });
+        }
+
+        if (itemList.length > 0 || autoShippingTotal > 0) {
+            renderGrid();
+
+            const selectionSection = document.getElementById('selection-section');
+            if (selectionSection) {
+                selectionSection.classList.remove('hidden');
+            }
+
+            const badge = document.getElementById('detected-shipping-badge');
+            if (badge) {
+                if (autoShippingTotal > 0) {
+                    badge.classList.remove('hidden');
+                    badge.innerText = `📦 배송비 ${new Intl.NumberFormat('ko-KR').format(autoShippingTotal)}원 감지`;
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            updatePreview();
+
+            if (selectionSection) {
+                selectionSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        } else {
+            alert("정보를 찾지 못했습니다.");
+        }
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('item-grid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+
+        itemList.forEach((item) => {
+            const card = document.createElement('div');
+            card.className = `item-card p-4 rounded-2xl bg-white flex flex-col justify-between h-36 relative ${item.selected ? 'selected' : ''}`;
+            card.onclick = () => {
+                item.selected = !item.selected;
+                card.classList.toggle('selected');
+                updatePreview();
+            };
+
+            card.innerHTML = `
+                <div class="absolute top-3 right-3 check-icon hidden text-blue-600 text-xl font-bold">✓</div>
+                <div class="text-[11px] font-bold text-slate-800 line-clamp-3 leading-snug pr-2">${item.name}</div>
+                <div class="flex justify-between items-end mt-4">
+                    <div class="text-blue-600 font-black text-sm">${new Intl.NumberFormat('ko-KR').format(item.price)}원</div>
+                    <div class="text-[10px] bg-slate-50 text-slate-400 px-2 py-1 rounded-lg border border-slate-100 font-bold">${item.qty}개</div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function toggleAll() {
+        const anyUnselected = itemList.some(it => !it.selected);
+        itemList.forEach(it => it.selected = anyUnselected);
+        renderGrid();
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const listBody = document.getElementById('final-list');
+        if (!listBody) return;
+
+        listBody.innerHTML = '';
+        let totalItemPrice = 0;
+        const selectedOnes = itemList.filter(it => it.selected);
+
+        if (selectedOnes.length === 0) {
+            listBody.innerHTML = '<tr><td colspan="4" class="py-24 text-center text-slate-300 font-medium italic">품목을 선택하면 견적서가 완성됩니다.</td></tr>';
+        }
+
+        selectedOnes.forEach(item => {
+            const sub = item.price * item.qty;
+            totalItemPrice += sub;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-4 py-4 border-black font-medium leading-relaxed">${item.name}</td>
+                <td class="text-center border-black font-bold">${item.qty}</td>
+                <td class="text-right px-4 border-black font-bold">${new Intl.NumberFormat('ko-KR').format(sub)}</td>
+                <td class="border-black"></td>
+            `;
+            listBody.appendChild(tr);
+        });
+
+        const padding = Math.max(0, 8 - selectedOnes.length);
+        for (let i = 0; i < padding; i++) {
+            listBody.innerHTML += `<tr><td class="py-5 border-black"></td><td class="border-black"></td><td class="border-black"></td><td class="border-black"></td></tr>`;
+        }
+
+        const inputShippingEl = document.getElementById('input-shipping');
+        const inputDiscountEl = document.getElementById('input-discount');
+
+        const manualShipping = inputShippingEl ? parseInt(inputShippingEl.value, 10) || 0 : 0;
+        const discount = inputDiscountEl ? parseInt(inputDiscountEl.value, 10) || 0 : 0;
+        const finalShipping = autoShippingTotal + manualShipping;
+
+        const resGross = document.getElementById('res-gross');
+        const resShipping = document.getElementById('res-shipping');
+        const resDiscount = document.getElementById('res-discount');
+        const resNet = document.getElementById('res-net');
+
+        if (resGross) resGross.innerText = new Intl.NumberFormat('ko-KR').format(totalItemPrice);
+        if (resShipping) resShipping.innerText = new Intl.NumberFormat('ko-KR').format(finalShipping);
+        if (resDiscount) resDiscount.innerText = new Intl.NumberFormat('ko-KR').format(discount);
+        if (resNet) resNet.innerText = new Intl.NumberFormat('ko-KR').format(totalItemPrice + finalShipping - discount);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const dateEl = document.getElementById('current-date');
+        if (dateEl) {
+            dateEl.innerText = new Date().toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+    });
+</script>
