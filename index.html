@@ -7,130 +7,159 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: Arial, sans-serif; }
+
     @media print {
       .no-print { display: none !important; }
       body { padding: 0; background: white; }
-      .print-area { border: none; box-shadow: none; width: 100%; margin: 0; padding: 0; }
+      .print-area {
+        border: none !important;
+        box-shadow: none !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
       table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-      th, td { border: 1px solid #000 !important; word-break: break-all; }
+      th, td { border: 1px solid #000 !important; word-break: break-word; }
       .print-title { display: block !important; }
     }
+
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #333; padding: 8px 12px; text-align: left; }
-    th { background-color: #f2f2f2; text-align: center; font-weight: bold; font-size: 13px; }
-    .bg-gray-custom { background-color: #f9f9f9; }
-    .bg-dark-custom { background-color: #e9e9e9; font-weight: bold; }
-    .print-title { display: none; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+    th { background-color: #f8fafc; text-align: center; font-weight: bold; font-size: 13px; }
+    .quote-head { background-color: #f8fafc; }
+    .quote-total { background-color: #eef2f7; font-weight: bold; }
+    .print-title {
+      display: none;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .soft-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    }
   </style>
 </head>
-<body class="bg-slate-50 p-4 md:p-8">
-  <div class="max-w-5xl mx-auto no-print">
-    <header class="mb-8">
-      <h1 class="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
-        <span class="text-blue-600">🛒</span> 쿠팡 체크상품 견적서 생성기 
-      </h1>
-      <p class="text-slate-500 mt-2">쿠팡 장바구니에서 북마클릿을 누르면 자동으로 체크 상품을 불러옵니다.</p>
-      <!-- 상태 메시지 박스 -->
-      <div id="status-box" class="mt-4 hidden rounded-xl px-4 py-3 text-sm"></div>
-    </header>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+  <div class="max-w-5xl mx-auto">
+    <div class="no-print mb-8 text-center">
+      <header class="mb-8">
+        <h1 class="text-4xl font-extrabold text-slate-900 flex items-center justify-center gap-3">
+          <span class="text-blue-600">🛒</span> 쿠팡 견적서 생성기
+        </h1>
+        <p class="text-slate-500 mt-4 text-lg">체크한 상품을 확인하고 견적서를 깔끔하게 정리하세요.</p>
+        <div id="status-box" class="mt-5 hidden rounded-2xl px-4 py-3 text-sm"></div>
+      </header>
 
-    <div id="selection-area" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 hidden">
-      <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4 border-b pb-4">
-        <div>
-          <h2 class="text-lg font-bold">가져온 체크 상품 확인</h2>
-          <p class="text-xs text-slate-500 mt-1">단가와 수량은 여기서 수정할 수 있습니다.</p>
+      <div id="selection-area" class="soft-card p-6 md:p-8 text-left hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 mb-5 border-b border-slate-200">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">가져온 체크 상품 확인</h2>
+            <p class="text-sm text-slate-500 mt-1">상품명, 수량, 단가를 확인한 뒤 견적서를 미리보세요.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="markAll(true)" class="action-btn px-4 py-2 rounded-xl bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-all">전체 체크</button>
+            <button onclick="markAll(false)" class="action-btn px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-all">전체 해제</button>
+          </div>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="markAll(true)" class="text-xs px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-bold hover:bg-blue-100">전체 체크</button>
-          <button onclick="markAll(false)" class="text-xs px-3 py-2 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200">전체 해제</button>
+
+        <div class="overflow-y-auto max-h-[420px] border border-slate-200 rounded-2xl mb-5 bg-slate-50/70">
+          <table class="w-full text-sm bg-white">
+            <thead class="sticky top-0 bg-slate-800 text-white z-10">
+              <tr>
+                <th class="w-16">선택</th>
+                <th>상품명</th>
+                <th class="w-24 text-center">수량</th>
+                <th class="w-36 text-right">단가</th>
+              </tr>
+            </thead>
+            <tbody id="parsed-list"></tbody>
+          </table>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 rounded-2xl bg-blue-50 border border-blue-100">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2">배송비</label>
+            <input type="number" id="input-shipping" value="0" oninput="updatePreview()" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white font-bold focus:border-blue-400">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2">할인금액</label>
+            <input type="number" id="input-discount" value="0" oninput="updatePreview()" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white text-red-600 font-bold focus:border-blue-400">
+          </div>
+          <div class="flex items-end">
+            <button onclick="scrollToPreview()" class="action-btn w-full h-11 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all shadow-lg">
+              견적서 미리보기 ↓
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="print-area" class="max-w-4xl mx-auto bg-white p-5 md:p-10 shadow-xl border border-slate-200 rounded-[28px] print-area relative mb-24">
+      <div class="print-title">견적 명세서</div>
+
+      <div class="mb-8 flex justify-between items-end gap-4 border-b-2 border-slate-900 pb-5">
+        <div>
+          <h3 class="text-3xl font-black text-slate-900">견적 상세 내역</h3>
+          <p class="text-xs text-slate-400 mt-2 uppercase tracking-[0.25em]">Estimated Quotation for School</p>
+        </div>
+        <div class="text-right text-sm text-slate-700">
+          <p class="font-bold">발행일: <span id="current-date"></span></p>
         </div>
       </div>
 
-      <div class="overflow-y-auto max-h-[420px] border rounded-xl mb-4">
-        <table class="w-full text-sm">
-          <thead class="sticky top-0 bg-slate-800 text-white z-10">
-            <tr>
-              <th class="w-16">선택</th>
-              <th>상품명</th>
-              <th class="w-20 text-center">수량</th>
-              <th class="w-32 text-right">단가</th>
+      <div class="rounded-2xl overflow-hidden border-2 border-slate-900">
+        <table class="w-full text-[13px]">
+          <thead>
+            <tr class="quote-head">
+              <th style="width: 55%;" class="border-black">상품명</th>
+              <th style="width: 10%;" class="border-black">수량</th>
+              <th style="width: 25%;" class="border-black">거래액<br>(VAT포함 원화)</th>
+              <th style="width: 10%;" class="border-black">비고</th>
             </tr>
           </thead>
-          <tbody id="parsed-list"></tbody>
+          <tbody id="final-list">
+            <tr><td colspan="4" class="py-20 text-center text-slate-300">체크 상품을 불러오면 여기에 견적서가 생성됩니다.</td></tr>
+          </tbody>
+          <tfoot class="border-t-2 border-black">
+            <tr>
+              <td colspan="2" class="text-center font-bold quote-head">총 거래액 합계</td>
+              <td id="res-gross" class="text-right font-bold px-4">0</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="2" class="text-center font-bold quote-head">배송비 합계</td>
+              <td id="res-shipping" class="text-right px-4">0</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="2" class="text-center font-bold quote-head">할인금액</td>
+              <td id="res-discount" class="text-right px-4 text-red-600">0</td>
+              <td></td>
+            </tr>
+            <tr class="quote-total">
+              <td colspan="2" class="text-center font-bold">실제 총 결제 금액</td>
+              <td id="res-net" class="text-right px-4 text-lg">0</td>
+              <td class="text-center text-[10px]">결제예정</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">배송비</label>
-          <input type="number" id="input-shipping" value="0" oninput="updatePreview()" class="w-full p-2 border rounded-lg outline-none font-bold">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">할인금액</label>
-          <input type="number" id="input-discount" value="0" oninput="updatePreview()" class="w-full p-2 border rounded-lg outline-none text-red-600 font-bold">
-        </div>
-        <div class="flex items-end">
-          <button onclick="scrollToPreview()" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold hover:bg-slate-900 transition">
-            견적서 미리보기 ↓
-          </button>
-        </div>
-      </div>
+      <button onclick="window.print()" class="no-print action-btn fixed bottom-8 right-8 bg-blue-600 text-white w-24 h-24 rounded-full shadow-2xl hover:scale-110 transition-all flex flex-col items-center justify-center z-50">
+        <span class="text-3xl">🖨️</span>
+        <span class="text-xs font-bold mt-1">인쇄/저장</span>
+      </button>
     </div>
-  </div>
-
-  <div id="print-area" class="max-w-4xl mx-auto bg-white p-4 md:p-12 shadow-2xl border border-slate-200 print-area relative mb-20">
-    <div class="print-title">견적 명세서</div>
-
-    <div class="mb-6 flex justify-between items-end border-b-2 border-black pb-4">
-      <div>
-        <h3 class="text-2xl font-black">견적 상세 내역</h3>
-        <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest">Estimated Quotation for School</p>
-      </div>
-      <div class="text-right text-sm">
-        <p class="font-bold">발행일: <span id="current-date"></span></p>
-      </div>
-    </div>
-
-    <table class="w-full text-[13px] border-2 border-black">
-      <thead>
-        <tr class="bg-gray-custom">
-          <th style="width: 55%;" class="border-black">상품명</th>
-          <th style="width: 10%;" class="border-black">수량</th>
-          <th style="width: 25%;" class="border-black">거래액<br>(VAT포함 원화)</th>
-          <th style="width: 10%;" class="border-black">비고</th>
-        </tr>
-      </thead>
-      <tbody id="final-list">
-        <tr><td colspan="4" class="py-20 text-center text-slate-300">체크 상품을 불러오면 여기에 견적서가 생성됩니다.</td></tr>
-      </tbody>
-      <tfoot class="border-t-2 border-black">
-        <tr>
-          <td colspan="2" class="text-center font-bold bg-gray-custom">총 거래액 합계</td>
-          <td id="res-gross" class="text-right font-bold px-4">0</td>
-          <td></td>
-        </tr>
-        <tr>
-          <td colspan="2" class="text-center font-bold bg-gray-custom">배송비 합계</td>
-          <td id="res-shipping" class="text-right px-4">0</td>
-          <td></td>
-        </tr>
-        <tr>
-          <td colspan="2" class="text-center font-bold bg-gray-custom">할인금액</td>
-          <td id="res-discount" class="text-right px-4 text-red-600">0</td>
-          <td></td>
-        </tr>
-        <tr class="bg-dark-custom">
-          <td colspan="2" class="text-center font-bold">실제 총 결제 금액</td>
-          <td id="res-net" class="text-right px-4 text-lg">0</td>
-          <td class="text-center text-[10px]">결제예정</td>
-        </tr>
-      </tfoot>
-    </table>
-
-    <button onclick="window.print()" class="no-print fixed bottom-8 right-8 bg-blue-600 text-white w-24 h-24 rounded-full shadow-2xl hover:scale-110 transition-all flex flex-col items-center justify-center z-50">
-      <span class="text-3xl">🖨️</span>
-      <span class="text-xs font-bold mt-1">인쇄/저장</span>
-    </button>
   </div>
 
   <script>
@@ -152,7 +181,7 @@
     function showStatus(message, type) {
       const box = document.getElementById('status-box');
       box.classList.remove('hidden');
-      box.className = 'mt-4 rounded-xl px-4 py-3 text-sm border';
+      box.className = 'mt-5 rounded-2xl px-4 py-3 text-sm border';
       if (type === 'ok') box.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
       else if (type === 'warn') box.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
       else box.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
@@ -164,16 +193,17 @@
       list.innerHTML = '';
       items.forEach((item, index) => {
         const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
         tr.innerHTML = `
           <td class="text-center p-4">
-            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="updateItemChecked(${index}, this.checked)">
+            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="updateItemChecked(${index}, this.checked)" class="w-4 h-4 accent-blue-600">
           </td>
-          <td class="p-4 font-medium">${escapeHtml(item.name)}</td>
+          <td class="p-4 font-medium text-slate-800">${escapeHtml(item.name)}</td>
           <td class="p-4 text-center">
-            <input type="number" min="1" value="${item.qty}" oninput="updateItemQty(${index}, this.value)" class="w-16 border rounded p-1 text-center bg-white">
+            <input type="number" min="1" value="${item.qty}" oninput="updateItemQty(${index}, this.value)" class="w-16 h-10 border border-slate-200 rounded-lg p-1 text-center bg-white">
           </td>
           <td class="p-4 text-right">
-            <input type="number" min="0" value="${item.price}" oninput="updateItemPrice(${index}, this.value)" class="w-28 border rounded p-1 text-right bg-white font-bold text-blue-600">
+            <input type="number" min="0" value="${item.price}" oninput="updateItemPrice(${index}, this.value)" class="w-28 h-10 border border-slate-200 rounded-lg p-1 text-right bg-white font-bold text-blue-600">
           </td>
         `;
         list.appendChild(tr);
@@ -272,7 +302,6 @@
     window.onload = () => {
       document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
       updatePreview();
-      // 초기 대기 메시지 제거
       if (window.opener) {
         try {
           window.opener.postMessage({ type: 'QUOTE_APP_READY' }, '*');
