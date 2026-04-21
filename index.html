@@ -116,14 +116,10 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 rounded-2xl bg-blue-50 border border-blue-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-50 border border-blue-100">
           <div>
             <label class="block text-xs font-bold text-slate-500 mb-2">배송비</label>
             <input type="number" id="input-shipping" value="0" oninput="updatePreview()" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white font-bold focus:border-blue-400">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-2">할인금액</label>
-            <input type="number" id="input-discount" value="0" oninput="updatePreview()" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white text-red-600 font-bold focus:border-blue-400">
           </div>
           <div class="flex items-end">
             <button onclick="showPreview()" class="action-btn w-full h-11 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all shadow-lg">
@@ -168,11 +164,6 @@
             <tr>
               <td colspan="2" class="text-center font-bold quote-head">배송비 합계</td>
               <td id="res-shipping" class="text-right px-4">0</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td colspan="2" class="text-center font-bold quote-head">할인금액</td>
-              <td id="res-discount" class="text-right px-4 text-red-600">0</td>
               <td></td>
             </tr>
             <tr class="quote-total">
@@ -375,12 +366,10 @@
       }
 
       const shipping = Math.max(0, parseInt(document.getElementById('input-shipping').value, 10) || 0);
-      const discount = Math.max(0, parseInt(document.getElementById('input-discount').value, 10) || 0);
-      const netTotal = Math.max(0, totalGross + shipping - discount);
+      const netTotal = totalGross + shipping;
 
       document.getElementById('res-gross').innerText = formatNumber(totalGross);
       document.getElementById('res-shipping').innerText = formatNumber(shipping);
-      document.getElementById('res-discount').innerText = formatNumber(discount);
       document.getElementById('res-net').innerText = formatNumber(netTotal);
     }
 
