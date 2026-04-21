@@ -188,13 +188,18 @@
 
   <script>
     const APP_ORIGIN = window.location.origin;
-    const TRUSTED_ORIGINS = new Set([
-      'https://www.coupang.com',
-      APP_ORIGIN
-    ]);
 
     let items = [];
     let previewVisible = false;
+    let openerOrigin = null;
+
+    function isTrustedCoupangOrigin(origin) {
+      return /^https:\/\/([a-z0-9-]+\.)?coupang\.com$/i.test(origin || '');
+    }
+
+    function isTrustedOrigin(origin) {
+      return origin === APP_ORIGIN || isTrustedCoupangOrigin(origin);
+    }
 
     function formatNumber(num) {
       return new Intl.NumberFormat('ko-KR').format(num);
@@ -380,24 +385,23 @@
 
     function isTrustedMessage(event) {
       if (!event || !event.data || typeof event.data.type !== 'string') return false;
-      if (!TRUSTED_ORIGINS.has(event.origin)) return false;
-      if (event.data.type === 'PING' || event.data.type === 'COUPANG_CART_ITEMS') {
-        return event.source === window.opener;
-      }
-      return false;
+      if (!isTrustedOrigin(event.origin)) return false;
+      return event.data.type === 'PING' || event.data.type === 'COUPANG_CART_ITEMS';
     }
 
     window.addEventListener('message', (event) => {
       if (!isTrustedMessage(event)) return;
 
       if (event.data.type === 'PING') {
-        if (window.opener && event.origin === 'https://www.coupang.com') {
+        openerOrigin = event.origin;
+        if (window.opener && isTrustedCoupangOrigin(event.origin)) {
           window.opener.postMessage({ type: 'QUOTE_APP_READY' }, event.origin);
         }
         return;
       }
 
       if (event.data.type === 'COUPANG_CART_ITEMS') {
+        openerOrigin = event.origin;
         const payload = event.data.payload;
         if (!Array.isArray(payload) || !payload.length) {
           showStatus('전달받은 상품 데이터가 비어 있습니다. 직접 추가해 주세요.', 'warn');
@@ -412,9 +416,13 @@
       document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
       renderSelectionTable();
       updatePreview();
-      if (window.opener && document.referrer.startsWith('https://www.coupang.com')) {
+      if (window.opener) {
         try {
-          window.opener.postMessage({ type: 'QUOTE_APP_READY' }, 'https://www.coupang.com');
+          const referrerOrigin = document.referrer ? new URL(document.referrer).origin : '';
+          if (isTrustedCoupangOrigin(referrerOrigin)) {
+            openerOrigin = referrerOrigin;
+            window.opener.postMessage({ type: 'QUOTE_APP_READY' }, referrerOrigin);
+          }
         } catch (e) {}
       }
       if (!previewVisible) {
