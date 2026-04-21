@@ -26,7 +26,13 @@
 
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #333; padding: 8px 12px; text-align: left; }
-    th { background-color: #f8fafc; text-align: center; font-weight: bold; font-size: 13px; }
+    th {
+      background-color: #f8fafc;
+      color: #0f172a;
+      text-align: center;
+      font-weight: bold;
+      font-size: 13px;
+    }
     .quote-head { background-color: #f8fafc; }
     .quote-total { background-color: #eef2f7; font-weight: bold; }
     .print-title {
@@ -75,7 +81,7 @@
 
         <div class="overflow-y-auto max-h-[420px] border border-slate-200 rounded-2xl mb-5 bg-slate-50/70">
           <table class="w-full text-sm bg-white">
-            <thead class="sticky top-0 bg-slate-800 text-white z-10">
+            <thead class="sticky top-0 z-10">
               <tr>
                 <th class="w-16">선택</th>
                 <th>상품명</th>
@@ -134,7 +140,6 @@
       <div class="mb-8 flex justify-between items-end gap-4 border-b-2 border-slate-900 pb-5">
         <div>
           <h3 class="text-3xl font-black text-slate-900">견적 상세 내역</h3>
-          <p class="text-xs text-slate-400 mt-2 uppercase tracking-[0.25em]">Estimated Quotation for School</p>
         </div>
         <div class="text-right text-sm text-slate-700">
           <p class="font-bold">발행일: <span id="current-date"></span></p>
@@ -322,10 +327,10 @@
     function setItems(newItems, sourceText) {
       items = newItems.map((item) => ({
         name: String(item.name || '상품명 없음').trim(),
-        price: Number(item.price || 0),
+        price: Math.max(0, Number(item.price || 0)),
         qty: Math.max(1, Number(item.qty || 1)),
         checked: item.checked !== false
-      })).filter((item) => item.name && item.price > 0);
+      })).filter((item) => item.name);
 
       if (!items.length) {
         renderSelectionTable();
@@ -336,7 +341,11 @@
 
       renderSelectionTable();
       updatePreview();
-      showStatus(sourceText, 'ok');
+      const zeroPriceCount = items.filter((item) => item.price === 0).length;
+      const statusMessage = zeroPriceCount
+        ? `${sourceText} 단가가 비어 있는 ${zeroPriceCount}개 상품은 직접 수정해 주세요.`
+        : sourceText;
+      showStatus(statusMessage, zeroPriceCount ? 'warn' : 'ok');
       document.getElementById('selection-area').scrollIntoView({ behavior: 'smooth' });
     }
 
