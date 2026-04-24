@@ -5,12 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>우성고 쿠팡 견적서 생성기</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; }
+    body {
+      font-family: Arial, sans-serif;
+    }
 
     @media print {
       .no-print { display: none !important; }
-      body { padding: 0; background: white; }
+
+      body {
+        padding: 0;
+        background: white;
+      }
+
       .print-area {
         display: block !important;
         border: none !important;
@@ -19,22 +27,77 @@
         margin: 0 !important;
         padding: 0 !important;
       }
-      table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-      th, td { border: 1px solid #000 !important; word-break: break-word; }
-      .print-title { display: block !important; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse !important;
+        table-layout: fixed;
+      }
+
+      th, td {
+        border: 1px solid #000 !important;
+        word-break: break-word;
+      }
+
+      .print-title {
+        display: block !important;
+      }
     }
 
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #333; padding: 8px 12px; text-align: left; }
-    th {
-      background-color: #f8fafc;
+    table {
+      width: 100%;
+    }
+
+    /* 체크 상품 테이블 전용 */
+    #selection-area table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    #selection-area th,
+    #selection-area td {
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 16px 18px;
+    }
+
+    #selection-area th:last-child,
+    #selection-area td:last-child {
+      border-right: none;
+    }
+
+    #selection-area tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    #selection-area thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
       color: #0f172a;
       text-align: center;
-      font-weight: bold;
+      font-weight: 800;
       font-size: 13px;
     }
-    .quote-head { background-color: #f8fafc; }
-    .quote-total { background-color: #eef2f7; font-weight: bold; }
+
+    #selection-area tbody tr {
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+
+    #selection-area tbody tr:hover {
+      background-color: #f8fbff;
+    }
+
+    .quote-head {
+      background-color: #f8fafc;
+    }
+
+    .quote-total {
+      background-color: #eef2f7;
+      font-weight: bold;
+    }
+
     .print-title {
       display: none;
       text-align: center;
@@ -45,43 +108,89 @@
 
     .soft-card {
       background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 24px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      border: 1px solid #dbeafe;
+      border-radius: 28px;
+      box-shadow:
+        0 20px 45px rgba(15, 23, 42, 0.08),
+        0 4px 12px rgba(37, 99, 235, 0.05);
+    }
+
+    .action-btn {
+      transition: all 0.18s ease;
     }
 
     .action-btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 12px 18px -8px rgba(37, 99, 235, 0.35);
+    }
+
+    .input-clean {
+      border: 1px solid #dbe3ef;
+      background: white;
+      transition: all 0.18s ease;
+    }
+
+    .input-clean:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      outline: none;
+    }
+
+    .table-shell {
+      max-height: 420px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      border-radius: 22px;
+      border: 1px solid #dbe3ef;
+      background: white;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .blue-gradient-btn {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    }
+
+    .blue-gradient-btn:hover {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
     }
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+
+<body class="bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 min-h-screen p-4 md:p-8">
   <div class="max-w-5xl mx-auto">
     <div class="no-print mb-8 text-center">
       <header class="mb-8">
         <h1 class="text-4xl font-extrabold text-slate-900 flex items-center justify-center gap-3">
           <span class="text-blue-600">🛒</span> 쿠팡 견적서 생성기
         </h1>
-        <p class="text-slate-500 mt-4 text-lg">체크한 상품을 확인하고 견적서를 깔끔하게 정리하세요.</p>
+        <p class="text-slate-500 mt-4 text-lg">
+          체크한 상품을 확인하고 견적서를 깔끔하게 정리하세요.
+        </p>
         <div id="status-box" class="mt-5 hidden rounded-2xl px-4 py-3 text-sm"></div>
       </header>
 
       <div id="selection-area" class="soft-card p-6 md:p-8 text-left">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 mb-5 border-b border-slate-200">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 mb-6 border-b border-slate-200">
           <div>
-            <h2 class="text-xl font-bold text-slate-900">가져온 체크 상품 확인</h2>
-            <p class="text-sm text-slate-500 mt-1">상품명, 수량, 단가를 확인하고 필요하면 수정한 뒤 견적서를 완성해 주세요.</p>
+            <h2 class="text-2xl font-black text-slate-900">가져온 체크 상품 확인</h2>
+            <p class="text-sm text-slate-500 mt-2">
+              상품명, 수량, 단가를 확인하고 필요하면 수정한 뒤 견적서를 완성해 주세요.
+            </p>
           </div>
+
           <div class="flex flex-wrap items-center gap-2">
-            <button onclick="markAll(true)" class="action-btn px-4 py-2 rounded-xl bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-all">전체 체크</button>
-            <button onclick="markAll(false)" class="action-btn px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-all">전체 해제</button>
+            <button onclick="markAll(true)" class="action-btn px-5 py-3 rounded-2xl bg-blue-50 text-blue-700 font-black hover:bg-blue-100">
+              전체 체크
+            </button>
+            <button onclick="markAll(false)" class="action-btn px-5 py-3 rounded-2xl bg-slate-100 text-slate-700 font-black hover:bg-slate-200">
+              전체 해제
+            </button>
           </div>
         </div>
 
-        <div class="overflow-y-auto max-h-[420px] border border-slate-200 rounded-2xl mb-5 bg-slate-50/70">
+        <div class="table-shell mb-6">
           <table class="w-full text-sm bg-white">
-            <thead class="sticky top-0 z-10">
+            <thead>
               <tr>
                 <th class="w-16">선택</th>
                 <th>상품명</th>
@@ -94,35 +203,65 @@
           </table>
         </div>
 
-        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 mb-5">
+        <div class="rounded-3xl border-2 border-dashed border-blue-200 bg-blue-50/30 p-5 mb-6">
           <div class="flex flex-col md:flex-row md:items-end gap-3">
             <div class="flex-1">
-              <label class="block text-xs font-bold text-slate-500 mb-2">상품명 추가</label>
-              <input type="text" id="new-item-name" placeholder="예: A4 복사용지 80g" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white focus:border-blue-400">
+              <label class="block text-xs font-black text-slate-600 mb-2">상품명 추가</label>
+              <input
+                type="text"
+                id="new-item-name"
+                placeholder="예: A4 복사용지 80g"
+                class="input-clean w-full h-12 px-4 rounded-2xl"
+              >
             </div>
+
             <div class="w-full md:w-28">
-              <label class="block text-xs font-bold text-slate-500 mb-2">수량</label>
-              <input type="number" id="new-item-qty" min="1" value="1" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white focus:border-blue-400">
+              <label class="block text-xs font-black text-slate-600 mb-2">수량</label>
+              <input
+                type="number"
+                id="new-item-qty"
+                min="1"
+                value="1"
+                class="input-clean w-full h-12 px-4 rounded-2xl"
+              >
             </div>
+
             <div class="w-full md:w-40">
-              <label class="block text-xs font-bold text-slate-500 mb-2">단가</label>
-              <input type="number" id="new-item-price" min="0" value="0" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white focus:border-blue-400">
+              <label class="block text-xs font-black text-slate-600 mb-2">단가</label>
+              <input
+                type="number"
+                id="new-item-price"
+                min="0"
+                value="0"
+                class="input-clean w-full h-12 px-4 rounded-2xl"
+              >
             </div>
+
             <div class="w-full md:w-auto">
-              <button onclick="addItem()" class="action-btn w-full md:w-auto h-11 px-5 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all">
+              <button onclick="addItem()" class="action-btn w-full md:w-auto h-12 px-6 rounded-2xl bg-slate-900 text-white font-black hover:bg-slate-800">
                 상품 추가
               </button>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-50 border border-blue-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-3xl bg-blue-50 border border-blue-100">
           <div>
-            <label class="block text-xs font-bold text-slate-500 mb-2">배송비</label>
-            <input type="number" id="input-shipping" value="0" oninput="updatePreview()" class="w-full h-11 px-3 border border-slate-200 rounded-xl outline-none bg-white font-bold focus:border-blue-400">
+            <label class="block text-xs font-black text-slate-600 mb-2">배송비</label>
+            <div class="relative">
+              <input
+                type="number"
+                id="input-shipping"
+                value="0"
+                oninput="updatePreview()"
+                class="input-clean w-full h-13 px-4 pr-12 rounded-2xl font-bold"
+              >
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">원</span>
+            </div>
           </div>
+
           <div class="flex items-end">
-            <button onclick="showPreview()" class="action-btn w-full h-11 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all shadow-lg">
+            <button onclick="showPreview()" class="action-btn blue-gradient-btn w-full h-14 rounded-2xl text-white text-lg font-black shadow-lg">
               견적서 완성하기 ↓
             </button>
           </div>
@@ -143,33 +282,37 @@
       </div>
 
       <div class="rounded-2xl overflow-hidden border-2 border-slate-900">
-        <table class="w-full text-[13px]">
+        <table class="w-full text-[13px]" style="border-collapse: collapse;">
           <thead>
             <tr class="quote-head">
-              <th style="width: 55%;" class="border-black">상품명</th>
-              <th style="width: 10%;" class="border-black">수량</th>
-              <th style="width: 25%;" class="border-black">거래액<br>(VAT포함 원화)</th>
-              <th style="width: 10%;" class="border-black">비고</th>
+              <th style="width: 55%;" class="border border-black p-2">상품명</th>
+              <th style="width: 10%;" class="border border-black p-2">수량</th>
+              <th style="width: 25%;" class="border border-black p-2">거래액<br>(VAT포함 원화)</th>
+              <th style="width: 10%;" class="border border-black p-2">비고</th>
             </tr>
           </thead>
           <tbody id="final-list">
-            <tr><td colspan="4" class="py-20 text-center text-slate-300">체크 상품을 불러오면 여기에 견적서가 생성됩니다.</td></tr>
+            <tr>
+              <td colspan="4" class="py-20 text-center text-slate-300 border border-black">
+                체크 상품을 불러오면 여기에 견적서가 생성됩니다.
+              </td>
+            </tr>
           </tbody>
           <tfoot class="border-t-2 border-black">
             <tr>
-              <td colspan="2" class="text-center font-bold quote-head">총 거래액 합계</td>
-              <td id="res-gross" class="text-right font-bold px-4">0</td>
-              <td></td>
+              <td colspan="2" class="text-center font-bold quote-head border border-black p-2">총 거래액 합계</td>
+              <td id="res-gross" class="text-right font-bold px-4 border border-black p-2">0</td>
+              <td class="border border-black p-2"></td>
             </tr>
             <tr>
-              <td colspan="2" class="text-center font-bold quote-head">배송비 합계</td>
-              <td id="res-shipping" class="text-right px-4">0</td>
-              <td></td>
+              <td colspan="2" class="text-center font-bold quote-head border border-black p-2">배송비 합계</td>
+              <td id="res-shipping" class="text-right px-4 border border-black p-2">0</td>
+              <td class="border border-black p-2"></td>
             </tr>
             <tr class="quote-total">
-              <td colspan="2" class="text-center font-bold">실제 총 결제 금액</td>
-              <td id="res-net" class="text-right px-4 text-lg">0</td>
-              <td class="text-center text-[10px]">결제예정</td>
+              <td colspan="2" class="text-center font-bold border border-black p-2">실제 총 결제 금액</td>
+              <td id="res-net" class="text-right px-4 text-lg border border-black p-2">0</td>
+              <td class="text-center text-[10px] border border-black p-2">결제예정</td>
             </tr>
           </tfoot>
         </table>
@@ -214,9 +357,15 @@
       const box = document.getElementById('status-box');
       box.classList.remove('hidden');
       box.className = 'mt-5 rounded-2xl px-4 py-3 text-sm border';
-      if (type === 'ok') box.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
-      else if (type === 'warn') box.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
-      else box.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+
+      if (type === 'ok') {
+        box.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
+      } else if (type === 'warn') {
+        box.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
+      } else {
+        box.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+      }
+
       box.textContent = message;
     }
 
@@ -229,28 +378,50 @@
       list.innerHTML = '';
 
       if (!items.length) {
-        list.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-400">표시할 상품이 없습니다. 직접 추가해 주세요.</td></tr>';
+        list.innerHTML = '<tr><td colspan="5" class="py-12 text-center text-slate-400 font-bold">표시할 상품이 없습니다. 직접 추가해 주세요.</td></tr>';
         return;
       }
 
       items.forEach((item, index) => {
         const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50';
+
         tr.innerHTML = `
-          <td class="text-center p-4">
-            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="updateItemChecked(${index}, this.checked)" class="w-4 h-4 accent-blue-600">
+          <td class="text-center">
+            <input
+              type="checkbox"
+              ${item.checked ? 'checked' : ''}
+              onchange="updateItemChecked(${index}, this.checked)"
+              class="w-5 h-5 accent-blue-600 cursor-pointer"
+            >
           </td>
-          <td class="p-4 font-medium text-slate-800">${escapeHtml(item.name)}</td>
-          <td class="p-4 text-center">
-            <input type="number" min="1" value="${item.qty}" oninput="updateItemQty(${index}, this.value)" class="w-16 h-10 border border-slate-200 rounded-lg p-1 text-center bg-white">
+          <td class="font-semibold text-slate-800 leading-relaxed">
+            ${escapeHtml(item.name)}
           </td>
-          <td class="p-4 text-right">
-            <input type="number" min="0" value="${item.price}" oninput="updateItemPrice(${index}, this.value)" class="w-28 h-10 border border-slate-200 rounded-lg p-1 text-right bg-white font-bold text-blue-600">
+          <td class="text-center">
+            <input
+              type="number"
+              min="1"
+              value="${item.qty}"
+              oninput="updateItemQty(${index}, this.value)"
+              class="input-clean w-20 h-11 rounded-xl px-2 text-center bg-white font-bold"
+            >
           </td>
-          <td class="text-center p-4">
-            <button onclick="removeItem(${index})" class="action-btn px-3 py-2 rounded-lg bg-red-50 text-red-700 font-bold hover:bg-red-100 transition-all">삭제</button>
+          <td class="text-right">
+            <input
+              type="number"
+              min="0"
+              value="${item.price}"
+              oninput="updateItemPrice(${index}, this.value)"
+              class="input-clean w-28 h-11 rounded-xl px-2 text-right bg-white font-black text-blue-600"
+            >
+          </td>
+          <td class="text-center">
+            <button onclick="removeItem(${index})" class="action-btn px-4 py-2 rounded-xl bg-red-50 text-red-700 font-black hover:bg-red-100">
+              삭제
+            </button>
           </td>
         `;
+
         list.appendChild(tr);
       });
     }
@@ -299,6 +470,7 @@
       }
 
       items.push({ name, qty, price, checked: true });
+
       nameInput.value = '';
       qtyInput.value = '1';
       priceInput.value = '0';
@@ -310,7 +482,10 @@
     }
 
     function markAll(flag) {
-      items.forEach((it) => { it.checked = flag; });
+      items.forEach((it) => {
+        it.checked = flag;
+      });
+
       renderSelectionTable();
       updatePreview();
     }
@@ -332,10 +507,12 @@
 
       renderSelectionTable();
       updatePreview();
+
       const zeroPriceCount = items.filter((item) => item.price === 0).length;
       const statusMessage = zeroPriceCount
         ? `${sourceText} 단가가 비어 있는 ${zeroPriceCount}개 상품은 직접 수정해 주세요.`
         : sourceText;
+
       showStatus(statusMessage, zeroPriceCount ? 'warn' : 'ok');
       document.getElementById('selection-area').scrollIntoView({ behavior: 'smooth' });
     }
@@ -343,24 +520,39 @@
     function updatePreview() {
       const finalList = document.getElementById('final-list');
       finalList.innerHTML = '';
+
       let totalGross = 0;
       const checkedItems = items.filter((it) => it.checked);
 
       if (!checkedItems.length) {
-        finalList.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-slate-300">선택된 상품이 없습니다.</td></tr>';
+        finalList.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-slate-300 border border-black">선택된 상품이 없습니다.</td></tr>';
       } else {
         checkedItems.forEach((item) => {
           const subtotal = item.price * item.qty;
           totalGross += subtotal;
+
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td class="px-4 py-3 border-black">${escapeHtml(item.name)}</td><td class="text-center border-black">${item.qty}</td><td class="text-right px-4 border-black font-medium">${formatNumber(subtotal)}</td><td class="border-black"></td>`;
+          tr.innerHTML = `
+            <td class="px-4 py-3 border border-black">${escapeHtml(item.name)}</td>
+            <td class="text-center border border-black">${item.qty}</td>
+            <td class="text-right px-4 border border-black font-medium">${formatNumber(subtotal)}</td>
+            <td class="border border-black"></td>
+          `;
+
           finalList.appendChild(tr);
         });
 
         const fillCount = Math.max(0, 10 - checkedItems.length);
+
         for (let i = 0; i < fillCount; i += 1) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td class="py-5 border-black"></td><td class="border-black"></td><td class="border-black"></td><td class="border-black"></td>';
+          tr.innerHTML = `
+            <td class="py-5 border border-black"></td>
+            <td class="border border-black"></td>
+            <td class="border border-black"></td>
+            <td class="border border-black"></td>
+          `;
+
           finalList.appendChild(tr);
         }
       }
@@ -375,8 +567,10 @@
 
     function showPreview() {
       previewVisible = true;
+
       const printArea = document.getElementById('print-area');
       printArea.classList.remove('hidden');
+
       updatePreview();
       printArea.scrollIntoView({ behavior: 'smooth' });
     }
@@ -384,6 +578,7 @@
     function isTrustedMessage(event) {
       if (!event || !event.data || typeof event.data.type !== 'string') return false;
       if (!isTrustedOrigin(event.origin)) return false;
+
       return event.data.type === 'PING' || event.data.type === 'COUPANG_CART_ITEMS';
     }
 
@@ -392,40 +587,50 @@
 
       if (event.data.type === 'PING') {
         openerOrigin = event.origin;
+
         if (window.opener && isTrustedCoupangOrigin(event.origin)) {
           window.opener.postMessage({ type: 'QUOTE_APP_READY' }, event.origin);
         }
+
         return;
       }
 
       if (event.data.type === 'COUPANG_CART_ITEMS') {
         openerOrigin = event.origin;
+
         const payload = event.data.payload;
+
         if (!Array.isArray(payload) || !payload.length) {
           showStatus('전달받은 상품 데이터가 비어 있습니다. 직접 추가해 주세요.', 'warn');
           renderSelectionTable();
           return;
         }
+
         setItems(payload, '북마클릿에서 체크 상품을 자동으로 불러왔습니다.');
       }
     });
 
     window.onload = () => {
       document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
+
       renderSelectionTable();
       updatePreview();
+
       if (window.opener) {
         try {
           const referrerOrigin = document.referrer ? new URL(document.referrer).origin : '';
+
           if (isTrustedCoupangOrigin(referrerOrigin)) {
             openerOrigin = referrerOrigin;
             window.opener.postMessage({ type: 'QUOTE_APP_READY' }, referrerOrigin);
           }
         } catch (e) {}
       }
+
       if (!previewVisible) {
         document.getElementById('print-area').classList.add('hidden');
       }
+
       if (!window.opener) {
         showStatus('북마클릿으로 불러오지 않아도 아래에서 상품을 직접 추가할 수 있습니다.', 'warn');
       }
