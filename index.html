@@ -1,640 +1,339 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>우성고 쿠팡 견적서 생성기</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-    }
-
-    @media print {
-      .no-print { display: none !important; }
-
-      body {
-        padding: 0;
-        background: white;
-      }
-
-      .print-area {
-        display: block !important;
-        border: none !important;
-        box-shadow: none !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse !important;
-        table-layout: fixed;
-      }
-
-      th, td {
-        border: 1px solid #000 !important;
-        word-break: break-word;
-      }
-
-      .print-title {
-        display: block !important;
-      }
-    }
-
-    table {
-      width: 100%;
-    }
-
-    /* 체크 상품 테이블 전용 */
-    #selection-area table {
-      border-collapse: separate;
-      border-spacing: 0;
-    }
-
-    #selection-area th,
-    #selection-area td {
-      border-right: 1px solid #e2e8f0;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 16px 18px;
-    }
-
-    #selection-area th:last-child,
-    #selection-area td:last-child {
-      border-right: none;
-    }
-
-    #selection-area tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    #selection-area thead th {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-      color: #0f172a;
-      text-align: center;
-      font-weight: 800;
-      font-size: 13px;
-    }
-
-    #selection-area tbody tr {
-      transition: background-color 0.15s ease, transform 0.15s ease;
-    }
-
-    #selection-area tbody tr:hover {
-      background-color: #f8fbff;
-    }
-
-    .quote-head {
-      background-color: #f8fafc;
-    }
-
-    .quote-total {
-      background-color: #eef2f7;
-      font-weight: bold;
-    }
-
-    .print-title {
-      display: none;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-
-    .soft-card {
-      background: white;
-      border: 1px solid #dbeafe;
-      border-radius: 28px;
-      box-shadow:
-        0 20px 45px rgba(15, 23, 42, 0.08),
-        0 4px 12px rgba(37, 99, 235, 0.05);
-    }
-
-    .action-btn {
-      transition: all 0.18s ease;
-    }
-
-    .action-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 12px 18px -8px rgba(37, 99, 235, 0.35);
-    }
-
-    .input-clean {
-      border: 1px solid #dbe3ef;
-      background: white;
-      transition: all 0.18s ease;
-    }
-
-    .input-clean:focus {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-      outline: none;
-    }
-
-    .table-shell {
-      max-height: 420px;
-      overflow-y: auto;
-      overflow-x: hidden;
-      border-radius: 22px;
-      border: 1px solid #dbe3ef;
-      background: white;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    }
-
-    .blue-gradient-btn {
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    }
-
-    .blue-gradient-btn:hover {
-      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-    }
-  </style>
-</head>
-
-<body class="bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 min-h-screen p-4 md:p-8">
-  <div class="max-w-5xl mx-auto">
-    <div class="no-print mb-8 text-center">
-      <header class="mb-8">
-        <h1 class="text-4xl font-extrabold text-slate-900 flex items-center justify-center gap-3">
-          <span class="text-blue-600">🛒</span> 쿠팡 견적서 생성기
-        </h1>
-        <p class="text-slate-500 mt-4 text-lg">
-          체크한 상품을 확인하고 견적서를 깔끔하게 정리하세요.
-        </p>
-        <div id="status-box" class="mt-5 hidden rounded-2xl px-4 py-3 text-sm"></div>
-      </header>
-
-      <div id="selection-area" class="soft-card p-6 md:p-8 text-left">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 mb-6 border-b border-slate-200">
-          <div>
-            <h2 class="text-2xl font-black text-slate-900">가져온 체크 상품 확인</h2>
-            <p class="text-sm text-slate-500 mt-2">
-              상품명, 수량, 단가를 확인하고 필요하면 수정한 뒤 견적서를 완성해 주세요.
-            </p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="markAll(true)" class="action-btn px-5 py-3 rounded-2xl bg-blue-50 text-blue-700 font-black hover:bg-blue-100">
-              전체 체크
-            </button>
-            <button onclick="markAll(false)" class="action-btn px-5 py-3 rounded-2xl bg-slate-100 text-slate-700 font-black hover:bg-slate-200">
-              전체 해제
-            </button>
-          </div>
-        </div>
-
-        <div class="table-shell mb-6">
-          <table class="w-full text-sm bg-white">
-            <thead>
-              <tr>
-                <th class="w-16">선택</th>
-                <th>상품명</th>
-                <th class="w-24 text-center">수량</th>
-                <th class="w-36 text-right">단가</th>
-                <th class="w-24 text-center">삭제</th>
-              </tr>
-            </thead>
-            <tbody id="parsed-list"></tbody>
-          </table>
-        </div>
-
-        <div class="rounded-3xl border-2 border-dashed border-blue-200 bg-blue-50/30 p-5 mb-6">
-          <div class="flex flex-col md:flex-row md:items-end gap-3">
-            <div class="flex-1">
-              <label class="block text-xs font-black text-slate-600 mb-2">상품명 추가</label>
-              <input
-                type="text"
-                id="new-item-name"
-                placeholder="예: A4 복사용지 80g"
-                class="input-clean w-full h-12 px-4 rounded-2xl"
-              >
-            </div>
-
-            <div class="w-full md:w-28">
-              <label class="block text-xs font-black text-slate-600 mb-2">수량</label>
-              <input
-                type="number"
-                id="new-item-qty"
-                min="1"
-                value="1"
-                class="input-clean w-full h-12 px-4 rounded-2xl"
-              >
-            </div>
-
-            <div class="w-full md:w-40">
-              <label class="block text-xs font-black text-slate-600 mb-2">단가</label>
-              <input
-                type="number"
-                id="new-item-price"
-                min="0"
-                value="0"
-                class="input-clean w-full h-12 px-4 rounded-2xl"
-              >
-            </div>
-
-            <div class="w-full md:w-auto">
-              <button onclick="addItem()" class="action-btn w-full md:w-auto h-12 px-6 rounded-2xl bg-slate-900 text-white font-black hover:bg-slate-800">
-                상품 추가
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-3xl bg-blue-50 border border-blue-100">
-          <div>
-            <label class="block text-xs font-black text-slate-600 mb-2">배송비</label>
-            <div class="relative">
-              <input
-                type="number"
-                id="input-shipping"
-                value="0"
-                oninput="updatePreview()"
-                class="input-clean w-full h-13 px-4 pr-12 rounded-2xl font-bold"
-              >
-              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">원</span>
-            </div>
-          </div>
-
-          <div class="flex items-end">
-            <button onclick="showPreview()" class="action-btn blue-gradient-btn w-full h-14 rounded-2xl text-white text-lg font-black shadow-lg">
-              견적서 완성하기 ↓
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="print-area" class="max-w-4xl mx-auto bg-white p-5 md:p-10 shadow-xl border border-slate-200 rounded-[28px] print-area relative mb-24 hidden">
-      <div class="print-title">견적 명세서</div>
-
-      <div class="mb-8 flex justify-between items-end gap-4 border-b-2 border-slate-900 pb-5">
-        <div>
-          <h3 class="text-3xl font-black text-slate-900">견적 상세 내역</h3>
-        </div>
-        <div class="text-right text-sm text-slate-700">
-          <p class="font-bold">발행일: <span id="current-date"></span></p>
-        </div>
-      </div>
-
-      <div class="rounded-2xl overflow-hidden border-2 border-slate-900">
-        <table class="w-full text-[13px]" style="border-collapse: collapse;">
-          <thead>
-            <tr class="quote-head">
-              <th style="width: 55%;" class="border border-black p-2">상품명</th>
-              <th style="width: 10%;" class="border border-black p-2">수량</th>
-              <th style="width: 25%;" class="border border-black p-2">거래액<br>(VAT포함 원화)</th>
-              <th style="width: 10%;" class="border border-black p-2">비고</th>
-            </tr>
-          </thead>
-          <tbody id="final-list">
-            <tr>
-              <td colspan="4" class="py-20 text-center text-slate-300 border border-black">
-                체크 상품을 불러오면 여기에 견적서가 생성됩니다.
-              </td>
-            </tr>
-          </tbody>
-          <tfoot class="border-t-2 border-black">
-            <tr>
-              <td colspan="2" class="text-center font-bold quote-head border border-black p-2">총 거래액 합계</td>
-              <td id="res-gross" class="text-right font-bold px-4 border border-black p-2">0</td>
-              <td class="border border-black p-2"></td>
-            </tr>
-            <tr>
-              <td colspan="2" class="text-center font-bold quote-head border border-black p-2">배송비 합계</td>
-              <td id="res-shipping" class="text-right px-4 border border-black p-2">0</td>
-              <td class="border border-black p-2"></td>
-            </tr>
-            <tr class="quote-total">
-              <td colspan="2" class="text-center font-bold border border-black p-2">실제 총 결제 금액</td>
-              <td id="res-net" class="text-right px-4 text-lg border border-black p-2">0</td>
-              <td class="text-center text-[10px] border border-black p-2">결제예정</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <button onclick="window.print()" class="no-print action-btn fixed bottom-8 right-8 bg-blue-600 text-white w-24 h-24 rounded-full shadow-2xl hover:scale-110 transition-all flex flex-col items-center justify-center z-50">
-        <span class="text-3xl">🖨️</span>
-        <span class="text-xs font-bold mt-1">인쇄/저장</span>
-      </button>
-    </div>
-  </div>
-
-  <script>
-    const APP_ORIGIN = window.location.origin;
-
-    let items = [];
-    let previewVisible = false;
-    let openerOrigin = null;
-
-    function isTrustedCoupangOrigin(origin) {
-      return /^https:\/\/([a-z0-9-]+\.)?coupang\.com$/i.test(origin || '');
-    }
-
-    function isTrustedOrigin(origin) {
-      return origin === APP_ORIGIN || isTrustedCoupangOrigin(origin);
-    }
-
-    function formatNumber(num) {
-      return new Intl.NumberFormat('ko-KR').format(num);
-    }
-
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function showStatus(message, type) {
-      const box = document.getElementById('status-box');
-      box.classList.remove('hidden');
-      box.className = 'mt-5 rounded-2xl px-4 py-3 text-sm border';
-
-      if (type === 'ok') {
-        box.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
-      } else if (type === 'warn') {
-        box.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
-      } else {
-        box.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
-      }
-
-      box.textContent = message;
-    }
-
-    function hideStatus() {
-      document.getElementById('status-box').classList.add('hidden');
-    }
-
-    function renderSelectionTable() {
-      const list = document.getElementById('parsed-list');
-      list.innerHTML = '';
-
-      if (!items.length) {
-        list.innerHTML = '<tr><td colspan="5" class="py-12 text-center text-slate-400 font-bold">표시할 상품이 없습니다. 직접 추가해 주세요.</td></tr>';
-        return;
-      }
-
-      items.forEach((item, index) => {
-        const tr = document.createElement('tr');
-
-        tr.innerHTML = `
-          <td class="text-center">
-            <input
-              type="checkbox"
-              ${item.checked ? 'checked' : ''}
-              onchange="updateItemChecked(${index}, this.checked)"
-              class="w-5 h-5 accent-blue-600 cursor-pointer"
-            >
-          </td>
-          <td class="font-semibold text-slate-800 leading-relaxed">
-            ${escapeHtml(item.name)}
-          </td>
-          <td class="text-center">
-            <input
-              type="number"
-              min="1"
-              value="${item.qty}"
-              oninput="updateItemQty(${index}, this.value)"
-              class="input-clean w-20 h-11 rounded-xl px-2 text-center bg-white font-bold"
-            >
-          </td>
-          <td class="text-right">
-            <input
-              type="number"
-              min="0"
-              value="${item.price}"
-              oninput="updateItemPrice(${index}, this.value)"
-              class="input-clean w-28 h-11 rounded-xl px-2 text-right bg-white font-black text-blue-600"
-            >
-          </td>
-          <td class="text-center">
-            <button onclick="removeItem(${index})" class="action-btn px-4 py-2 rounded-xl bg-red-50 text-red-700 font-black hover:bg-red-100">
-              삭제
-            </button>
-          </td>
-        `;
-
-        list.appendChild(tr);
-      });
-    }
-
-    function updateItemChecked(index, isChecked) {
-      items[index].checked = isChecked;
-      updatePreview();
-    }
-
-    function updateItemQty(index, val) {
-      items[index].qty = Math.max(1, parseInt(val, 10) || 1);
-      updatePreview();
-    }
-
-    function updateItemPrice(index, val) {
-      items[index].price = Math.max(0, parseInt(val, 10) || 0);
-      updatePreview();
-    }
-
-    function removeItem(index) {
-      items.splice(index, 1);
-      renderSelectionTable();
-      updatePreview();
-      showStatus('상품을 목록에서 삭제했습니다.', 'ok');
-    }
-
-    function addItem() {
-      const nameInput = document.getElementById('new-item-name');
-      const qtyInput = document.getElementById('new-item-qty');
-      const priceInput = document.getElementById('new-item-price');
-
-      const name = nameInput.value.trim();
-      const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
-      const price = Math.max(0, parseInt(priceInput.value, 10) || 0);
-
-      if (!name) {
-        showStatus('추가할 상품명을 입력해 주세요.', 'warn');
-        nameInput.focus();
-        return;
-      }
-
-      if (price <= 0) {
-        showStatus('추가할 상품의 단가를 입력해 주세요.', 'warn');
-        priceInput.focus();
-        return;
-      }
-
-      items.push({ name, qty, price, checked: true });
-
-      nameInput.value = '';
-      qtyInput.value = '1';
-      priceInput.value = '0';
-
-      renderSelectionTable();
-      updatePreview();
-      hideStatus();
-      showStatus('상품을 직접 추가했습니다.', 'ok');
-    }
-
-    function markAll(flag) {
-      items.forEach((it) => {
-        it.checked = flag;
-      });
-
-      renderSelectionTable();
-      updatePreview();
-    }
-
-    function setItems(newItems, sourceText) {
-      items = newItems.map((item) => ({
-        name: String(item.name || '상품명 없음').trim(),
-        price: Math.max(0, Number(item.price || 0)),
-        qty: Math.max(1, Number(item.qty || 1)),
-        checked: item.checked !== false
-      })).filter((item) => item.name);
-
-      if (!items.length) {
-        renderSelectionTable();
-        updatePreview();
-        showStatus('가져온 데이터에 유효한 상품이 없습니다. 직접 추가해 주세요.', 'warn');
-        return;
-      }
-
-      renderSelectionTable();
-      updatePreview();
-
-      const zeroPriceCount = items.filter((item) => item.price === 0).length;
-      const statusMessage = zeroPriceCount
-        ? `${sourceText} 단가가 비어 있는 ${zeroPriceCount}개 상품은 직접 수정해 주세요.`
-        : sourceText;
-
-      showStatus(statusMessage, zeroPriceCount ? 'warn' : 'ok');
-      document.getElementById('selection-area').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function updatePreview() {
-      const finalList = document.getElementById('final-list');
-      finalList.innerHTML = '';
-
-      let totalGross = 0;
-      const checkedItems = items.filter((it) => it.checked);
-
-      if (!checkedItems.length) {
-        finalList.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-slate-300 border border-black">선택된 상품이 없습니다.</td></tr>';
-      } else {
-        checkedItems.forEach((item) => {
-          const subtotal = item.price * item.qty;
-          totalGross += subtotal;
-
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="px-4 py-3 border border-black">${escapeHtml(item.name)}</td>
-            <td class="text-center border border-black">${item.qty}</td>
-            <td class="text-right px-4 border border-black font-medium">${formatNumber(subtotal)}</td>
-            <td class="border border-black"></td>
-          `;
-
-          finalList.appendChild(tr);
+javascript:(function() {
+
+    try {
+
+        const APP_URL = 'https://kanggonbong.github.io/estimate-app/';
+        const APP_ORIGIN = new URL(APP_URL).origin;
+
+        // 체크된 상품만 가져오기
+        const CHECKBOXES = [
+            ...document.querySelectorAll('input[type="checkbox"]')
+        ].filter(cb =>
+            cb.checked &&
+            cb.offsetParent !== null
+        );
+
+        const items = [];
+
+        function text(v) {
+            return String(v || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // 상품 row 찾기
+        function getRow(cb) {
+
+            let el = cb.parentElement;
+
+            for (let i = 0; i < 15 && el; i++, el = el.parentElement) {
+
+                if (
+                    el.querySelector('input.cart-quantity-input') &&
+                    el.querySelector('[data-component-id="price-area"]')
+                ) {
+                    return el;
+                }
+            }
+
+            return null;
+        }
+
+        // 상품명 추출
+        function getName(row, cb) {
+
+            const title = text(
+                cb.getAttribute('title')
+            );
+
+            if (title) return title;
+
+            const byName =
+                row.querySelector('#name span.twc-text-custom-black') ||
+                row.querySelector('#name a span.twc-text-custom-black') ||
+                row.querySelector('span.twc-text-custom-black') ||
+                row.querySelector('.product-name');
+
+            return text(byName?.innerText);
+        }
+
+        // 수량 추출
+        function getQty(row) {
+
+            const qtyInput = row.querySelector(
+                'input.cart-quantity-input'
+            );
+
+            if (qtyInput) {
+
+                const n = parseInt(
+                    String(qtyInput.value || '')
+                    .replace(/[^\d]/g, ''),
+                    10
+                );
+
+                if (n > 0) return n;
+            }
+
+            return 1;
+        }
+
+        // 가격 추출
+        function getDisplayedTotalPrice(row) {
+
+            const priceArea = row.querySelector(
+                '[data-component-id="price-area"]'
+            );
+
+            if (!priceArea) return 0;
+
+            // 메인 가격 우선 탐색
+            const preferred = [
+                ...priceArea.querySelectorAll('span')
+            ]
+            .map(el => ({
+                cls: String(el.className || ''),
+                txt: text(el.innerText)
+            }))
+            .filter(v =>
+                (
+                    v.cls.includes('twc-text-[20px]/[27px]') ||
+                    v.cls.includes('twc-font-bold')
+                ) &&
+                /[0-9][0-9,]*/.test(v.txt)
+            );
+
+            if (preferred.length) {
+
+                const n = parseInt(
+                    (
+                        preferred[0].txt.match(/[0-9][0-9,]*/)
+                        || ['0']
+                    )[0].replace(/,/g, ''),
+                    10
+                );
+
+                if (n > 0) return n;
+            }
+
+            // fallback
+            const nums = [];
+
+            const lines = (priceArea.innerText || '')
+                .split('\n')
+                .map(v => v.trim())
+                .filter(Boolean);
+
+            lines.forEach(line => {
+
+                // 단위가격/배송비 제외
+                if (
+                    /100g당|100ml당|10g당|1개당|개당|당\s*\d|배송비|총상품금액|총 주문금액|결제예정금액|합계|카드할인|무이자/i
+                    .test(line)
+                ) {
+                    return;
+                }
+
+                [
+                    ...line.matchAll(
+                        /([0-9][0-9,]{2,})\s*원/g
+                    )
+                ]
+                .forEach(m => {
+
+                    const n = parseInt(
+                        m[1].replace(/,/g, ''),
+                        10
+                    );
+
+                    if (n > 99) {
+                        nums.push(n);
+                    }
+                });
+            });
+
+            return nums.length
+                ? Math.min(...nums)
+                : 0;
+        }
+
+        // 상품 처리
+        CHECKBOXES.forEach((cb, index) => {
+
+            const row = getRow(cb);
+
+            if (!row) return;
+
+            const baseName = getName(row, cb);
+
+            if (!baseName) return;
+
+            // 옵션 추출 강화
+            let optionInfo = '';
+
+            // 방법1
+            const optionEl = [
+                ...row.querySelectorAll('*')
+            ].find(el => {
+
+                const t = text(el.innerText);
+
+                return (
+                    t.startsWith('옵션:') ||
+                    t.includes('옵션 :')
+                );
+            });
+
+            if (optionEl) {
+
+                optionInfo = text(
+                    optionEl.innerText
+                ).replace(
+                    /^옵션\s*:\s*/,
+                    ''
+                );
+            }
+
+            // 방법2 fallback
+            if (!optionInfo) {
+
+                const rowText = text(
+                    row.innerText
+                );
+
+                const match = rowText.match(
+                    /옵션\s*:\s*([^\n]+)/
+                );
+
+                if (match) {
+                    optionInfo = text(match[1]);
+                }
+            }
+
+            // 최종 상품명
+            const finalName = optionInfo
+                ? `${baseName} [${optionInfo}]`
+                : baseName;
+
+            const qty = getQty(row);
+
+            const totalPrice = getDisplayedTotalPrice(row);
+
+            const unitPrice = qty > 0
+                ? Math.round(totalPrice / qty)
+                : totalPrice;
+
+            // 중복 제거 로직 제거
+            // 체크된 row는 전부 저장
+            items.push({
+                id: 'item_' + index + '_' + Date.now(),
+                name: finalName,
+                price: unitPrice || 0,
+                qty: qty,
+                checked: true
+            });
+
         });
 
-        const fillCount = Math.max(0, 10 - checkedItems.length);
+        if (!items.length) {
 
-        for (let i = 0; i < fillCount; i += 1) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="py-5 border border-black"></td>
-            <td class="border border-black"></td>
-            <td class="border border-black"></td>
-            <td class="border border-black"></td>
-          `;
+            alert('체크된 상품을 찾지 못했습니다.');
 
-          finalList.appendChild(tr);
-        }
-      }
-
-      const shipping = Math.max(0, parseInt(document.getElementById('input-shipping').value, 10) || 0);
-      const netTotal = totalGross + shipping;
-
-      document.getElementById('res-gross').innerText = formatNumber(totalGross);
-      document.getElementById('res-shipping').innerText = formatNumber(shipping);
-      document.getElementById('res-net').innerText = formatNumber(netTotal);
-    }
-
-    function showPreview() {
-      previewVisible = true;
-
-      const printArea = document.getElementById('print-area');
-      printArea.classList.remove('hidden');
-
-      updatePreview();
-      printArea.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function isTrustedMessage(event) {
-      if (!event || !event.data || typeof event.data.type !== 'string') return false;
-      if (!isTrustedOrigin(event.origin)) return false;
-
-      return event.data.type === 'PING' || event.data.type === 'COUPANG_CART_ITEMS';
-    }
-
-    window.addEventListener('message', (event) => {
-      if (!isTrustedMessage(event)) return;
-
-      if (event.data.type === 'PING') {
-        openerOrigin = event.origin;
-
-        if (window.opener && isTrustedCoupangOrigin(event.origin)) {
-          window.opener.postMessage({ type: 'QUOTE_APP_READY' }, event.origin);
+            return;
         }
 
-        return;
-      }
+        // 견적 앱 열기
+        const newWin = window.open(
+            APP_URL,
+            '_blank'
+        );
 
-      if (event.data.type === 'COUPANG_CART_ITEMS') {
-        openerOrigin = event.origin;
+        if (!newWin) {
 
-        const payload = event.data.payload;
+            alert(
+                '새 창이 차단되었습니다. 브라우저 팝업 차단을 해제해 주세요.'
+            );
 
-        if (!Array.isArray(payload) || !payload.length) {
-          showStatus('전달받은 상품 데이터가 비어 있습니다. 직접 추가해 주세요.', 'warn');
-          renderSelectionTable();
-          return;
+            return;
         }
 
-        setItems(payload, '북마클릿에서 체크 상품을 자동으로 불러왔습니다.');
-      }
-    });
+        let sent = false;
 
-    window.onload = () => {
-      document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
+        const startAt = Date.now();
 
-      renderSelectionTable();
-      updatePreview();
+        function sendData() {
 
-      if (window.opener) {
-        try {
-          const referrerOrigin = document.referrer ? new URL(document.referrer).origin : '';
+            if (sent) return;
 
-          if (isTrustedCoupangOrigin(referrerOrigin)) {
-            openerOrigin = referrerOrigin;
-            window.opener.postMessage({ type: 'QUOTE_APP_READY' }, referrerOrigin);
-          }
-        } catch (e) {}
-      }
+            sent = true;
 
-      if (!previewVisible) {
-        document.getElementById('print-area').classList.add('hidden');
-      }
+            newWin.postMessage({
+                type: 'COUPANG_CART_ITEMS',
+                payload: items
+            }, APP_ORIGIN);
+        }
 
-      if (!window.opener) {
-        showStatus('북마클릿으로 불러오지 않아도 아래에서 상품을 직접 추가할 수 있습니다.', 'warn');
-      }
-    };
-  </script>
-</body>
-</html>
+        // 앱 로딩 대기
+        const timer = setInterval(() => {
+
+            if (Date.now() - startAt > 7000) {
+
+                clearInterval(timer);
+
+                sendData();
+
+                window.removeEventListener(
+                    'message',
+                    onMessage
+                );
+
+                return;
+            }
+
+            try {
+
+                newWin.postMessage({
+                    type: 'PING'
+                }, APP_ORIGIN);
+
+            } catch (e) {}
+
+        }, 400);
+
+        // 앱 준비 완료 수신
+        function onMessage(event) {
+
+            if (event.origin !== APP_ORIGIN) return;
+
+            if (event.source !== newWin) return;
+
+            if (
+                event.data &&
+                event.data.type === 'QUOTE_APP_READY'
+            ) {
+
+                clearInterval(timer);
+
+                sendData();
+
+                window.removeEventListener(
+                    'message',
+                    onMessage
+                );
+            }
+        }
+
+        window.addEventListener(
+            'message',
+            onMessage
+        );
+
+    } catch (e) {
+
+        alert(
+            '북마클릿 실행 중 오류 발생: ' +
+            e.message
+        );
+    }
+
+})();
