@@ -1,529 +1,307 @@
-```html
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+```javascript
+javascript:(()=>{
 
-  <title>우성고 쿠팡 견적서 생성기</title>
+try{
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  const APP_URL='https://kanggonbong.github.io/estimate-app/';
+  const APP_ORIGIN=new URL(APP_URL).origin;
 
-  <style>
-    body{
-      font-family:Arial,sans-serif;
-    }
+  const CHECKBOXES=[
+    ...document.querySelectorAll('input[type="checkbox"]')
+  ].filter(cb=>cb.checked&&cb.offsetParent!==null);
 
-    .input-clean{
-      border:1px solid #dbe3ef;
-      background:white;
-      transition:all .18s ease;
-    }
+  const items=[];
+  const seen=new Set();
 
-    .input-clean:focus{
-      border-color:#2563eb;
-      box-shadow:0 0 0 4px rgba(37,99,235,.12);
-      outline:none;
-    }
-
-    .action-btn{
-      transition:all .18s ease;
-    }
-
-    .action-btn:hover{
-      transform:translateY(-1px);
-    }
-
-    @media print{
-      .no-print{
-        display:none!important;
-      }
-    }
-  </style>
-</head>
-
-<body class="bg-slate-100 min-h-screen p-6">
-
-<div class="max-w-6xl mx-auto">
-
-  <div class="bg-white rounded-3xl shadow-xl p-8">
-
-    <div class="mb-8">
-      <h1 class="text-4xl font-black text-slate-900">
-        🛒 쿠팡 견적서 생성기
-      </h1>
-
-      <p class="text-slate-500 mt-3">
-        북마클릿으로 체크 상품을 자동 불러옵니다.
-      </p>
-
-      <div id="status-box"
-           class="hidden mt-4 rounded-2xl px-4 py-3 text-sm">
-      </div>
-    </div>
-
-    <div class="overflow-x-auto rounded-2xl border border-slate-200">
-
-      <table class="w-full text-sm bg-white">
-
-        <thead class="bg-slate-100">
-          <tr>
-            <th class="p-4 w-16">선택</th>
-            <th class="p-4 text-left">상품명</th>
-            <th class="p-4 w-24">수량</th>
-            <th class="p-4 w-40 text-right">단가</th>
-            <th class="p-4 w-24">삭제</th>
-          </tr>
-        </thead>
-
-        <tbody id="parsed-list"></tbody>
-
-      </table>
-
-    </div>
-
-    <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-
-      <input
-        type="text"
-        id="new-item-name"
-        placeholder="상품명"
-        class="input-clean h-12 px-4 rounded-2xl"
-      >
-
-      <input
-        type="number"
-        id="new-item-qty"
-        value="1"
-        min="1"
-        class="input-clean h-12 px-4 rounded-2xl"
-      >
-
-      <input
-        type="number"
-        id="new-item-price"
-        value="0"
-        min="0"
-        class="input-clean h-12 px-4 rounded-2xl"
-      >
-
-      <button
-        onclick="addItem()"
-        class="action-btn bg-slate-900 text-white rounded-2xl font-black"
-      >
-        상품 추가
-      </button>
-
-    </div>
-
-    <div class="mt-10 border-t pt-8">
-
-      <div class="flex justify-between items-center mb-4">
-
-        <h2 class="text-2xl font-black">
-          견적서
-        </h2>
-
-        <button
-          onclick="window.print()"
-          class="no-print action-btn bg-blue-600 text-white px-6 py-3 rounded-2xl font-black"
-        >
-          인쇄
-        </button>
-
-      </div>
-
-      <table class="w-full border-collapse border border-black text-sm">
-
-        <thead>
-
-          <tr class="bg-slate-100">
-            <th class="border border-black p-3">상품명</th>
-            <th class="border border-black p-3 w-24">수량</th>
-            <th class="border border-black p-3 w-40">금액</th>
-          </tr>
-
-        </thead>
-
-        <tbody id="final-list"></tbody>
-
-        <tfoot>
-
-          <tr>
-            <td colspan="2"
-                class="border border-black p-3 text-right font-black">
-              총합
-            </td>
-
-            <td id="res-total"
-                class="border border-black p-3 text-right font-black">
-              0
-            </td>
-          </tr>
-
-        </tfoot>
-
-      </table>
-
-    </div>
-
-  </div>
-
-</div>
-
-<script>
-const APP_ORIGIN=window.location.origin;
-
-let items=[];
-
-function escapeHtml(str){
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
-
-function formatNumber(num){
-  return new Intl.NumberFormat('ko-KR').format(num);
-}
-
-function showStatus(message,type='ok'){
-  const box=document.getElementById('status-box');
-
-  box.classList.remove('hidden');
-
-  box.className='mt-4 rounded-2xl px-4 py-3 text-sm';
-
-  if(type==='ok'){
-    box.classList.add(
-      'bg-blue-50',
-      'text-blue-700'
-    );
-  }else{
-    box.classList.add(
-      'bg-red-50',
-      'text-red-700'
-    );
+  function text(v){
+    return String(v||'')
+      .replace(/\s+/g,' ')
+      .trim();
   }
 
-  box.textContent=message;
-}
+  function getRow(cb){
 
-function renderSelectionTable(){
+    let el=cb.parentElement;
 
-  const list=document.getElementById('parsed-list');
+    for(let i=0;i<12&&el;i++,el=el.parentElement){
 
-  list.innerHTML='';
+      const hasQty=
+        el.querySelector('input.cart-quantity-input');
+
+      const hasPrice=
+        el.querySelector('[data-component-id="price-area"]');
+
+      if(hasQty&&hasPrice){
+        return el;
+      }
+    }
+
+    return null;
+  }
+
+  function getName(row,cb){
+
+    const title=text(
+      cb.getAttribute('title')
+    );
+
+    let baseName='';
+
+    if(title){
+
+      baseName=title;
+
+    }else{
+
+      const byName=
+        row.querySelector('#name span.twc-text-custom-black')||
+        row.querySelector('#name a span.twc-text-custom-black')||
+        row.querySelector('span.twc-text-custom-black');
+
+      baseName=text(byName?.innerText);
+    }
+
+    // 옵션 줄 탐색
+    const optionLine=[
+      ...row.querySelectorAll('*')
+    ]
+    .map(el=>text(el.innerText))
+    .find(v=>
+      v.startsWith('옵션:')
+    );
+
+    // 옵션 있으면 제목에 합치기
+    if(optionLine){
+
+      const cleanOption=
+        optionLine.replace(/^옵션:\s*/,'');
+
+      return `${baseName}\n- ${cleanOption}`;
+    }
+
+    return baseName;
+  }
+
+  function getQty(row){
+
+    const qtyInput=
+      row.querySelector('input.cart-quantity-input');
+
+    if(qtyInput){
+
+      const n=parseInt(
+        String(qtyInput.value||'')
+          .replace(/[^\d]/g,''),
+        10
+      );
+
+      if(n>0)return n;
+    }
+
+    return 1;
+  }
+
+  function getDisplayedTotalPrice(row){
+
+    const priceArea=
+      row.querySelector('[data-component-id="price-area"]');
+
+    if(!priceArea)return 0;
+
+    const preferred=[
+      ...priceArea.querySelectorAll('span')
+    ]
+    .map(el=>({
+      cls:String(el.className||''),
+      txt:text(el.innerText)
+    }))
+    .filter(v=>
+      v.cls.includes('twc-text-[20px]/[27px]')&&
+      v.cls.includes('twc-font-bold')&&
+      /[0-9][0-9,]*/.test(v.txt)
+    );
+
+    if(preferred.length){
+
+      const n=parseInt(
+        (
+          preferred[0].txt.match(/[0-9][0-9,]*/)
+          ||['0']
+        )[0].replace(/,/g,''),
+        10
+      );
+
+      if(n>0)return n;
+    }
+
+    const nums=[];
+
+    const lines=(priceArea.innerText||'')
+      .split('\n')
+      .map(v=>v.trim())
+      .filter(Boolean);
+
+    lines.forEach(line=>{
+
+      if(
+        /100g당|100ml당|10g당|1개당|개당|당\s*\d|배송비|총상품금액|총 주문금액|결제예정금액|합계|카드할인|무이자/i.test(line)
+      ){
+        return;
+      }
+
+      [
+        ...line.matchAll(
+          /([0-9][0-9,]{2,})\s*원/g
+        )
+      ].forEach(m=>{
+
+        const n=parseInt(
+          m[1].replace(/,/g,''),
+          10
+        );
+
+        if(n>99){
+          nums.push(n);
+        }
+      });
+    });
+
+    return nums.length
+      ?Math.min(...nums)
+      :0;
+  }
+
+  CHECKBOXES.forEach(cb=>{
+
+    const row=getRow(cb);
+
+    if(!row)return;
+
+    const name=getName(row,cb);
+
+    if(!name)return;
+
+    const qty=getQty(row);
+
+    const totalPrice=
+      getDisplayedTotalPrice(row);
+
+    const unitPrice=
+      qty>0
+        ?Math.floor(totalPrice/qty)
+        :totalPrice;
+
+    // 제목 자체로 중복 제거
+    const key=name;
+
+    if(seen.has(key))return;
+
+    seen.add(key);
+
+    items.push({
+      name,
+      price:unitPrice||0,
+      qty,
+      checked:true
+    });
+  });
 
   if(!items.length){
 
-    list.innerHTML=`
-      <tr>
-        <td colspan="5"
-            class="text-center py-16 text-slate-400">
-          상품이 없습니다.
-        </td>
-      </tr>
-    `;
-
-    updatePreview();
+    alert(
+      '체크된 상품을 찾지 못했습니다.'
+    );
 
     return;
   }
 
-  items.forEach((item,index)=>{
+  const newWin=
+    window.open(APP_URL,'_blank');
 
-    const tr=document.createElement('tr');
+  if(!newWin){
 
-    tr.className='border-t';
-
-    tr.innerHTML=`
-      <td class="p-4 text-center">
-        <input
-          type="checkbox"
-          ${item.checked?'checked':''}
-          onchange="updateItemChecked(${index},this.checked)"
-        >
-      </td>
-
-      <td class="p-4">
-
-        <div class="font-bold text-slate-800">
-          ${escapeHtml(item.name)}
-        </div>
-
-        ${
-          item.option
-            ? `
-              <div class="text-xs text-slate-500 mt-1">
-                ${escapeHtml(item.option)}
-              </div>
-            `
-            : ''
-        }
-
-      </td>
-
-      <td class="p-4 text-center">
-
-        <input
-          type="number"
-          min="1"
-          value="${item.qty}"
-          onchange="updateItemQty(${index},this.value)"
-          class="input-clean w-20 h-10 rounded-xl px-2 text-center"
-        >
-
-      </td>
-
-      <td class="p-4 text-right">
-
-        <input
-          type="number"
-          min="0"
-          value="${item.price}"
-          onchange="updateItemPrice(${index},this.value)"
-          class="input-clean w-28 h-10 rounded-xl px-2 text-right"
-        >
-
-      </td>
-
-      <td class="p-4 text-center">
-
-        <button
-          onclick="removeItem(${index})"
-          class="action-btn bg-red-50 text-red-700 px-3 py-2 rounded-xl font-bold"
-        >
-          삭제
-        </button>
-
-      </td>
-    `;
-
-    list.appendChild(tr);
-  });
-
-  updatePreview();
-}
-
-function updateItemChecked(index,val){
-  items[index].checked=val;
-  updatePreview();
-}
-
-function updateItemQty(index,val){
-  items[index].qty=
-    Math.max(1,parseInt(val)||1);
-
-  updatePreview();
-}
-
-function updateItemPrice(index,val){
-  items[index].price=
-    Math.max(0,parseInt(val)||0);
-
-  updatePreview();
-}
-
-function removeItem(index){
-  items.splice(index,1);
-
-  renderSelectionTable();
-}
-
-function addItem(){
-
-  const name=document
-    .getElementById('new-item-name')
-    .value
-    .trim();
-
-  const qty=Math.max(
-    1,
-    parseInt(
-      document.getElementById('new-item-qty').value
-    )||1
-  );
-
-  const price=Math.max(
-    0,
-    parseInt(
-      document.getElementById('new-item-price').value
-    )||0
-  );
-
-  if(!name){
-    showStatus('상품명을 입력하세요','error');
-    return;
-  }
-
-  items.push({
-    productId:'',
-    option:'',
-    name,
-    qty,
-    price,
-    checked:true
-  });
-
-  renderSelectionTable();
-
-  showStatus('상품 추가 완료');
-}
-
-function updatePreview(){
-
-  const finalList=document.getElementById('final-list');
-
-  finalList.innerHTML='';
-
-  let total=0;
-
-  const checkedItems=
-    items.filter(v=>v.checked);
-
-  if(!checkedItems.length){
-
-    finalList.innerHTML=`
-      <tr>
-        <td colspan="3"
-            class="text-center py-16 text-slate-400 border border-black">
-          선택된 상품이 없습니다.
-        </td>
-      </tr>
-    `;
-
-    document.getElementById('res-total').innerText='0';
+    alert(
+      '새 창이 차단되었습니다. 팝업 차단을 해제해 주세요.'
+    );
 
     return;
   }
 
-  checkedItems.forEach(item=>{
+  let sent=false;
 
-    const subtotal=item.price*item.qty;
+  const startAt=Date.now();
 
-    total+=subtotal;
+  function sendData(){
 
-    const tr=document.createElement('tr');
+    if(sent)return;
 
-    tr.innerHTML=`
-      <td class="border border-black p-3">
+    sent=true;
 
-        <div>
-          ${escapeHtml(item.name)}
-        </div>
+    newWin.postMessage({
+      type:'COUPANG_CART_ITEMS',
+      payload:items
+    },APP_ORIGIN);
+  }
 
-        ${
-          item.option
-            ? `
-              <div style="font-size:11px;color:#666;margin-top:4px;">
-                ${escapeHtml(item.option)}
-              </div>
-            `
-            : ''
-        }
+  const timer=setInterval(()=>{
 
-      </td>
+    if(Date.now()-startAt>7000){
 
-      <td class="border border-black p-3 text-center">
-        ${item.qty}
-      </td>
+      clearInterval(timer);
 
-      <td class="border border-black p-3 text-right">
-        ${formatNumber(subtotal)}
-      </td>
-    `;
+      sendData();
 
-    finalList.appendChild(tr);
-  });
-
-  document.getElementById('res-total')
-    .innerText=formatNumber(total);
-}
-
-window.addEventListener('message',(event)=>{
-
-  if(!event.data)return;
-
-  if(event.data.type==='PING'){
-
-    if(window.opener){
-      window.opener.postMessage(
-        {type:'QUOTE_APP_READY'},
-        event.origin
+      window.removeEventListener(
+        'message',
+        onMessage
       );
-    }
 
-    return;
-  }
-
-  if(event.data.type==='COUPANG_CART_ITEMS'){
-
-    const payload=event.data.payload;
-
-    if(!Array.isArray(payload)){
       return;
     }
 
-    items=payload.map(item=>({
-
-      productId:String(item.productId||''),
-
-      option:String(item.option||''),
-
-      name:String(item.name||'상품명 없음'),
-
-      qty:Math.max(
-        1,
-        Number(item.qty||1)
-      ),
-
-      price:Math.max(
-        0,
-        Number(item.price||0)
-      ),
-
-      checked:item.checked!==false
-
-    }));
-
-    renderSelectionTable();
-
-    showStatus(
-      `${items.length}개 상품 불러오기 완료`
-    );
-  }
-
-});
-
-window.onload=()=>{
-
-  renderSelectionTable();
-
-  if(window.opener){
-
     try{
 
-      const referrerOrigin=
-        document.referrer
-          ? new URL(document.referrer).origin
-          : '';
-
-      if(referrerOrigin){
-
-        window.opener.postMessage(
-          {type:'QUOTE_APP_READY'},
-          referrerOrigin
-        );
-      }
+      newWin.postMessage({
+        type:'PING'
+      },APP_ORIGIN);
 
     }catch(e){}
-  }
-};
-</script>
 
-</body>
-</html>
+  },400);
+
+  function onMessage(event){
+
+    if(event.origin!==APP_ORIGIN)return;
+
+    if(event.source!==newWin)return;
+
+    if(
+      event.data&&
+      event.data.type==='QUOTE_APP_READY'
+    ){
+
+      clearInterval(timer);
+
+      sendData();
+
+      window.removeEventListener(
+        'message',
+        onMessage
+      );
+    }
+  }
+
+  window.addEventListener(
+    'message',
+    onMessage
+  );
+
+}catch(e){
+
+  alert(
+    '북마클릿 실행 중 오류: '+e.message
+  );
+}
+
+})();
 ```
